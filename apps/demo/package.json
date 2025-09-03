@@ -12,6 +12,12 @@
   },
   "dependencies": {
     "@wallet-panel/react": "file:../../packages/wallet-panel",
+    "@privy-io/react-auth": "^1.99.0",
+    "@zerodev/sdk": "^5.4.41",
+    "@zerodev/ecdsa-validator": "^5.4.9",
+    "permissionless": "^0.2.54",
+    "viem": "^2.37.0",
+    "wagmi": "^2.16.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

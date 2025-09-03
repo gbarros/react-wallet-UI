@@ -1,58 +1,13 @@
-import React, { useState } from 'react'
-import { WalletPanel } from '@wallet-panel/react'
+import { useState } from 'react'
+import { usePrivy } from '@privy-io/react-auth'
+import { PrivyProvider } from '@privy-io/react-auth'
+import { WalletPanel, WalletTrigger } from '@wallet-panel/react'
 import type { ChainConfig, Erc20 } from '@wallet-panel/react'
+import { useZeroDev } from './hooks/useZeroDev'
+import './index.css'
 
-// Mock Privy client for demo
-const mockPrivyClient = {
-  user: {
-    wallet: {
-      address: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6',
-    },
-  },
-  authenticated: true,
-  ready: true,
-  login: async () => {
-    console.log('Mock Privy login')
-  },
-  logout: async () => {
-    console.log('Mock Privy logout')
-  },
-  getEthereumProvider: () => ({
-    request: async ({ method, params }: any) => {
-      console.log('Mock provider request:', method, params)
-      
-      switch (method) {
-        case 'personal_sign':
-          return '0x' + '0'.repeat(130) // Mock signature
-        case 'eth_sendTransaction':
-          return '0x' + '1'.repeat(64) // Mock transaction hash
-        case 'eth_chainId':
-          return '0x1' // Ethereum mainnet
-        case 'wallet_switchEthereumChain':
-          return null
-        default:
-          throw new Error(`Unsupported method: ${method}`)
-      }
-    },
-  }),
-}
-
-// Mock ZeroDev context for demo
-const mockZeroDevContext = {
-  projectId: 'demo-project-id',
-  isConnected: true,
-  address: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6' as const,
-  sendUserOperation: async (tx: any) => {
-    console.log('Mock ZeroDev sendUserOperation:', tx)
-    return {
-      hash: '0x' + '2'.repeat(64),
-      userOpHash: '0x' + '3'.repeat(64),
-    }
-  },
-  switchChain: async (chainId: number) => {
-    console.log('Mock ZeroDev switchChain:', chainId)
-  },
-}
+// Environment configuration
+const PRIVY_APP_ID = import.meta.env.VITE_PRIVY_APP_ID
 
 // Demo configuration
 const demoChains: ChainConfig[] = [
@@ -60,6 +15,11 @@ const demoChains: ChainConfig[] = [
     id: 1,
     name: 'Ethereum',
     rpcUrl: 'https://eth.llamarpc.com',
+  },
+  {
+    id: 11155111,
+    name: 'Sepolia',
+    rpcUrl: 'https://sepolia.gateway.tenderly.co',
   },
   {
     id: 137,
@@ -91,24 +51,92 @@ const demoTokens: Erc20[] = [
   },
 ]
 
-function App() {
+// Demo component that uses Privy
+function DemoContent() {
+  const { ready, authenticated, user, login, logout, getEthereumProvider } = usePrivy()
   const [mode, setMode] = useState<'privy-only' | 'zerodev-only' | 'unified'>('unified')
   const [showPanel, setShowPanel] = useState(true)
+  const [displayMode, setDisplayMode] = useState<'inline' | 'modal'>('inline')
+
+  // Initialize ZeroDev hook with error handling
+  const zeroDevContext = useZeroDev()
+
+  // Create a proper PrivyClientLike object
+  const privyClientLike = ready ? {
+    ready,
+    authenticated,
+    user: user ? {
+      wallet: user.wallet ? {
+        address: user.wallet.address
+      } : undefined
+    } : undefined,
+    login: async () => { 
+      await login()
+      // After Privy login, trigger ZeroDev connection
+      if (zeroDevContext.connect) {
+        await zeroDevContext.connect()
+      }
+    },
+    logout,
+    getEthereumProvider
+  } : undefined
 
   const getProviders = () => {
     switch (mode) {
       case 'privy-only':
-        return { privyClient: mockPrivyClient, zerodev: undefined }
+        return { privyClient: privyClientLike, zerodev: undefined }
       case 'zerodev-only':
-        return { privyClient: undefined, zerodev: mockZeroDevContext }
+        return { privyClient: undefined, zerodev: zeroDevContext }
       case 'unified':
-        return { privyClient: mockPrivyClient, zerodev: mockZeroDevContext }
+        return { privyClient: privyClientLike, zerodev: zeroDevContext }
       default:
         return { privyClient: undefined, zerodev: undefined }
     }
   }
 
   const { privyClient, zerodev } = getProviders()
+
+  if (!ready) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading Privy...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error if ZeroDev failed to initialize
+  if (zeroDevContext.error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 flex items-center justify-center">
+        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md text-center">
+          <h1 className="text-2xl font-bold text-red-900 mb-4">ZeroDev Error</h1>
+          <p className="text-red-600 mb-4">{zeroDevContext.error}</p>
+          <div className="bg-red-100 p-3 rounded text-left text-sm">
+            <p>Check your ZeroDev configuration:</p>
+            <ul className="list-disc list-inside mt-2">
+              <li>Project ID: {zeroDevContext.projectId}</li>
+              <li>Environment variables are set correctly</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show loading state if ZeroDev is still initializing
+  if (zeroDevContext.isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Initializing Smart Account...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -126,17 +154,31 @@ function App() {
         {/* Controls */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
           <div className="flex flex-wrap gap-4 items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <label className="text-sm font-medium text-gray-700">Mode:</label>
-              <select
-                value={mode}
-                onChange={(e) => setMode(e.target.value as any)}
-                className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-              >
-                <option value="unified">Privy + ZeroDev</option>
-                <option value="privy-only">Privy Only</option>
-                <option value="zerodev-only">ZeroDev Only</option>
-              </select>
+            <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-2">
+                <label className="text-sm font-medium text-gray-700">Mode:</label>
+                <select
+                  value={mode}
+                  onChange={(e) => setMode(e.target.value as any)}
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                >
+                  <option value="unified">Privy + ZeroDev</option>
+                  <option value="privy-only">Privy Only</option>
+                  <option value="zerodev-only">ZeroDev Only</option>
+                </select>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <label className="text-sm font-medium text-gray-700">Display:</label>
+                <select
+                  value={displayMode}
+                  onChange={(e) => setDisplayMode(e.target.value as any)}
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                >
+                  <option value="inline">Inline Panel</option>
+                  <option value="modal">Modal Overlay</option>
+                </select>
+              </div>
             </div>
             
             <button
@@ -154,33 +196,72 @@ function App() {
             <h2 className="text-2xl font-semibold text-gray-900">Wallet Panel</h2>
             
             {showPanel ? (
-              <div className="flex justify-center">
-                <WalletPanel
-                  privyClient={privyClient}
-                  zerodev={zerodev}
-                  chains={demoChains}
-                  tokens={demoTokens}
-                  enableSponsoredTx={true}
-                  showWalletConnect={true}
-                  showChainSelector={true}
-                  onRequestLogin={() => {
-                    console.log('Login requested')
-                    alert('Login flow would be triggered here')
-                  }}
-                  onTxSubmitted={(hash) => {
-                    console.log('Transaction submitted:', hash)
-                    alert(`Transaction submitted: ${hash.slice(0, 10)}...`)
-                  }}
-                  onSign={(signature, message) => {
-                    console.log('Message signed:', { signature, message })
-                    alert(`Message signed successfully!`)
-                  }}
-                  onRequestExport={() => {
-                    console.log('Export requested')
-                    alert('Export/migration flow would be triggered here')
-                  }}
-                />
-              </div>
+              displayMode === 'modal' ? (
+                <div className="flex justify-center">
+                  <WalletTrigger
+                    privyClient={privyClient}
+                    zerodev={zerodev}
+                    chains={demoChains}
+                    tokens={demoTokens}
+                    enableSponsoredTx={true}
+                    showWalletConnect={true}
+                    showChainSelector={true}
+                    modalTitle="Demo Wallet"
+                    onRequestLogin={async () => {
+                      console.log('Login requested')
+                      await login()
+                      // After Privy login, trigger ZeroDev connection
+                      if (zeroDevContext.connect) {
+                        await zeroDevContext.connect()
+                      }
+                    }}
+                    onTxSubmitted={(hash: string) => {
+                      console.log('Transaction submitted:', hash)
+                      alert(`Transaction submitted: ${hash.slice(0, 10)}...`)
+                    }}
+                    onSign={(signature: string, message: string) => {
+                      console.log('Message signed:', { signature, message })
+                      alert(`Message signed successfully!`)
+                    }}
+                    onRequestExport={() => {
+                      console.log('Export requested')
+                      alert('Export functionality would be triggered here')
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="flex justify-center">
+                  <WalletPanel
+                    privyClient={privyClient}
+                    zerodev={zerodev}
+                    chains={demoChains}
+                    tokens={demoTokens}
+                    enableSponsoredTx={true}
+                    showWalletConnect={true}
+                    showChainSelector={true}
+                    onRequestLogin={async () => {
+                      console.log('Login requested')
+                      await login()
+                      // After Privy login, trigger ZeroDev connection
+                      if (zeroDevContext.connect) {
+                        await zeroDevContext.connect()
+                      }
+                    }}
+                    onTxSubmitted={(hash: string) => {
+                      console.log('Transaction submitted:', hash)
+                      alert(`Transaction submitted: ${hash.slice(0, 10)}...`)
+                    }}
+                    onSign={(signature: string, message: string) => {
+                      console.log('Message signed:', { signature, message })
+                      alert(`Message signed successfully!`)
+                    }}
+                    onRequestExport={() => {
+                      console.log('Export requested')
+                      alert('Export functionality would be triggered here')
+                    }}
+                  />
+                </div>
+              )
             ) : (
               <div className="text-center text-gray-500 py-12">
                 Panel hidden - click "Show Panel" to display
@@ -222,18 +303,14 @@ function App() {
             </div>
 
             <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-semibold mb-4">Usage</h3>
-              <pre className="text-xs bg-gray-100 p-3 rounded overflow-x-auto">
-{`<WalletPanel
-  privyClient={privyClient}
-  zerodev={zerodevContext}
-  chains={chains}
-  tokens={tokens}
-  enableSponsoredTx={true}
-  onRequestLogin={() => openLogin()}
-  onTxSubmitted={(hash) => console.log(hash)}
-/>`}
-              </pre>
+              <h3 className="text-lg font-semibold mb-4">Environment Setup</h3>
+              <div className="text-sm space-y-2">
+                <p>Copy <code>.env.example</code> to <code>.env</code> and fill in your API keys:</p>
+                <ul className="list-disc list-inside text-gray-600 space-y-1">
+                  <li>VITE_PRIVY_APP_ID: Your Privy app ID</li>
+                  <li>VITE_ZERODEV_PROJECT_ID: Your ZeroDev project ID</li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
@@ -243,11 +320,73 @@ function App() {
           <p>
             This is a demo of the React Wallet Panel component.
             <br />
-            All transactions are mocked and no real funds are involved.
+            {!PRIVY_APP_ID && <span className="text-orange-600">⚠️ Set VITE_PRIVY_APP_ID in .env to use real authentication</span>}
           </p>
         </div>
       </div>
     </div>
+  )
+}
+
+// Force clear Privy storage on app load if needed
+const clearPrivyStorage = () => {
+  try {
+    // Clear localStorage entries related to Privy
+    Object.keys(localStorage).forEach(key => {
+      if (key.includes('privy') || key.includes('wallet')) {
+        localStorage.removeItem(key)
+      }
+    })
+    // Clear sessionStorage entries related to Privy
+    Object.keys(sessionStorage).forEach(key => {
+      if (key.includes('privy') || key.includes('wallet')) {
+        sessionStorage.removeItem(key)
+      }
+    })
+  } catch (error) {
+    console.warn('Could not clear storage:', error)
+  }
+}
+
+// Main App component with Privy provider
+function App() {
+  // Uncomment the line below if you need to force clear storage
+  // clearPrivyStorage()
+  
+  if (!PRIVY_APP_ID) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Environment Setup Required</h1>
+          <p className="text-gray-600 mb-4">
+            Please copy <code>.env.example</code> to <code>.env</code> and add your Privy App ID to get started.
+          </p>
+          <div className="bg-gray-100 p-3 rounded text-left text-sm">
+            <code>VITE_PRIVY_APP_ID=your_privy_app_id_here</code>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <PrivyProvider 
+      appId={PRIVY_APP_ID}
+      config={{
+        loginMethods: ['email', 'wallet'],
+        appearance: {
+          theme: 'light',
+          accentColor: '#676FFF',
+        },
+        // Disable auto-login to prevent automatic reconnection after logout
+        embeddedWallets: {
+          createOnLogin: 'users-without-wallets',
+          requireUserPasswordOnCreate: false,
+        },
+      }}
+    >
+      <DemoContent />
+    </PrivyProvider>
   )
 }
 
