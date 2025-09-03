@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+lib/
+esm/
+cjs/
+
+# Generated files
+*.d.ts
+!src/**/*.d.ts
+
+# Coverage
+coverage/
+
+# Logs
+*.log
+
+# Environment files
+.env*
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Package manager
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Storybook
+storybook-static/
+
+# Vite
+.vite/
+
+# Temporary
+*.tmp
+*.temp
+
+# Documentation
+docs/api/

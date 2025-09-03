@@ -1,0 +1,19 @@
+# Build outputs
+dist/
+lib/
+esm/
+cjs/
+types/
+
+# TypeScript
+*.tsbuildinfo
+
+# Test coverage
+coverage/
+
+# Storybook
+storybook-static/
+
+# Temporary files
+*.tmp
+*.temp

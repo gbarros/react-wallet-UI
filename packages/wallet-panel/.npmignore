@@ -1,0 +1,51 @@
+# Source files (only ship built files)
+src/
+*.ts
+*.tsx
+!dist/**/*.d.ts
+
+# Development files
+.eslintrc.*
+.prettierrc.*
+tsconfig*.json
+vite.config.*
+vitest.config.*
+tailwind.config.*
+postcss.config.*
+
+# Test files
+**/__tests__/
+**/*.test.*
+**/*.spec.*
+test/
+tests/
+coverage/
+
+# Documentation
+*.md
+!README.md
+
+# Development dependencies
+node_modules/
+
+# Build tools
+.vite/
+.turbo/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment
+.env*
+
+# Temporary
+*.tmp
+*.temp

@@ -1,0 +1,62 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs (will be built in container)
+dist/
+build/
+lib/
+esm/
+cjs/
+
+# Development files
+.git/
+.gitignore
+.eslintrc.*
+.prettierrc.*
+.editorconfig
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment files (should be passed as build args or runtime env)
+.env*
+!.env.example
+
+# Documentation
+README.md
+CHANGELOG.md
+LICENSE
+docs/
+
+# Test files
+coverage/
+test-results/
+**/__tests__/
+**/*.test.*
+**/*.spec.*
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Package manager lock files (will be regenerated)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
