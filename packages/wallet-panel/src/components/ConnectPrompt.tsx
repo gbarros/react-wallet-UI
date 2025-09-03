@@ -1,4 +1,4 @@
-import React from 'react'
+// import React from 'react' // Not needed with new JSX transform
 import { Wallet } from 'lucide-react'
 import { Button } from './ui/button'
 import type { LocaleStrings } from '../types'

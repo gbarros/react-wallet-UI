@@ -1,8 +1,8 @@
-import React from 'react'
+// import React from 'react' // Not needed with new JSX transform
 import { RefreshCw } from 'lucide-react'
 import type { WalletState, LocaleStrings } from '../types'
 import { Button } from './ui/button'
-import { formatBalance } from '../lib/utils'
+// import { formatBalance } from '../lib/utils' // Currently unused
 
 interface BalancesTabProps {
   walletState: WalletState

@@ -15,5 +15,9 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "viem": "^2.37.2",
+    "wagmi": "^2.16.9"
   }
 }

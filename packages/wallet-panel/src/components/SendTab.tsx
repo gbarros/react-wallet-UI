@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { Send, AlertCircle } from 'lucide-react'
-import type { Address } from 'viem'
+import type { Address } from '../types'
 import type { WalletState, LocaleStrings, Erc20, SendFormData } from '../types'
 import type { UnifiedWalletAdapter } from '../adapters'
 import { Button } from './ui/button'
@@ -58,7 +58,7 @@ export function SendTab({
       assets.push({
         id: tokenBalance.token.address,
         symbol: tokenBalance.token.symbol,
-        balance: tokenBalance.token.balance,
+        balance: tokenBalance.balance,
         formatted: tokenBalance.formatted,
         decimals: tokenBalance.token.decimals,
       })
@@ -278,7 +278,7 @@ export function SendTab({
           ) : (
             <>
               <Send className="h-4 w-4 mr-2" />
-              {strings.send}
+              {strings.sendButton}
             </>
           )}
         </Button>

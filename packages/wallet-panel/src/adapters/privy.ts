@@ -1,4 +1,4 @@
-import type { Address, Hash, Hex } from 'viem'
+import type { Address, Hash, Hex } from '../types'
 import type { 
   PrivyClientLike, 
   TransactionRequest, 

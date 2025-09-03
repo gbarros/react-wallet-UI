@@ -1,4 +1,4 @@
-import type { Address, Hash, Hex } from 'viem'
+import type { Address, Hex } from '../types'
 import type { 
   WalletSigner,
   SmartAccountSigner,

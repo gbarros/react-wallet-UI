@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, ExternalLink, AlertCircle } from 'lucide-react'
-import type { Address } from 'viem'
+import type { Address } from '../types'
 import type { LocaleStrings } from '../types'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -14,7 +14,7 @@ interface WalletConnectTabProps {
  * Component for WalletConnect integration
  * Allows connecting the wallet to external dApps
  */
-export function WalletConnectTab({ address, strings }: WalletConnectTabProps) {
+export function WalletConnectTab({ address }: WalletConnectTabProps) {
   const [wcUri, setWcUri] = useState('')
   const [isConnecting, setIsConnecting] = useState(false)
   const [error, setError] = useState('')
@@ -51,7 +51,7 @@ export function WalletConnectTab({ address, strings }: WalletConnectTabProps) {
       if (typeof window !== 'undefined') {
         try {
           // Dynamic import to avoid SSR issues
-          const { WalletConnectModal } = await import('@walletconnect/modal')
+          await import('@walletconnect/modal')
           
           // This is a simplified example - actual implementation would be more complex
           console.log('Connecting to WalletConnect URI:', wcUri)
@@ -94,7 +94,7 @@ export function WalletConnectTab({ address, strings }: WalletConnectTabProps) {
     try {
       if (typeof window !== 'undefined') {
         // This would open the WalletConnect modal for scanning QR codes
-        const { WalletConnectModal } = await import('@walletconnect/modal')
+        await import('@walletconnect/modal')
         console.log('Opening WalletConnect modal...')
         // Actual implementation would open the modal here
       }

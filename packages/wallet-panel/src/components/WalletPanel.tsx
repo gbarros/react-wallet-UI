@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import { useMemo } from 'react'
 import type { WalletPanelProps, LocaleStrings } from '../types'
 import { DEFAULT_LOCALE_STRINGS } from '../types'
 import { useWalletAdapter } from '../hooks/useWalletAdapter'
@@ -15,10 +15,8 @@ import { ConnectPrompt } from './ConnectPrompt'
 export function WalletPanel({
   privyClient,
   zerodev,
-  wagmiConfig,
   showChainSelector = true,
   showWalletConnect = true,
-  defaultCollapsed = false,
   chains = [],
   tokens = [],
   enableSponsoredTx = false,
@@ -29,6 +27,7 @@ export function WalletPanel({
   onRequestExport,
   localeStrings = {},
   className,
+  adapter,
 }: WalletPanelProps) {
   // Merge provided locale strings with defaults
   const strings: LocaleStrings = useMemo(
@@ -36,14 +35,23 @@ export function WalletPanel({
     [localeStrings]
   )
 
-  // Initialize wallet adapter
-  const { adapter, isReady, isConnected, isSmartAccountActive } = useWalletAdapter(
-    privyClient,
-    zerodev
-  )
+  // Use injected adapter if provided (for integration/testing), otherwise useWalletAdapter
+  const adapterResult = useMemo(() => {
+    if (adapter) {
+      // Simulate the return shape of useWalletAdapter
+      return {
+        adapter,
+        isReady: adapter.isReady?.() ?? false,
+        isConnected: adapter.isConnected?.() ?? false,
+        isSmartAccountActive: adapter.isSmartAccountActive?.() ?? false,
+      }
+    }
+    return useWalletAdapter(privyClient, zerodev)
+  }, [adapter, privyClient, zerodev])
 
+  const { adapter: activeAdapter, isReady, isConnected, isSmartAccountActive } = adapterResult
   // Manage wallet state
-  const walletState = useWalletState(adapter, tokens)
+  const walletState = useWalletState(activeAdapter, tokens)
 
   // Handle login request
   const handleLogin = async () => {

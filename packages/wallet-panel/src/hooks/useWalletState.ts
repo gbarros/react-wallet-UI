@@ -1,8 +1,20 @@
+
 import { useState, useEffect, useCallback } from 'react'
-import type { Address } from 'viem'
+import type { Address } from '../types'
 import type { WalletState, TokenBalance, NativeBalance, Erc20 } from '../types'
 import type { UnifiedWalletAdapter } from '../adapters'
 import { formatBalance } from '../lib/utils'
+import { createPublicClient, http, formatUnits } from 'viem'
+
+// Default to Ethereum mainnet if no RPC provided
+const getPublicClient = (chainId: number, rpcUrl?: string) => {
+  // You may want to extend this to support more chains and custom RPCs
+  const url = rpcUrl || 'https://mainnet.infura.io/v3/your-infura-id'
+  return createPublicClient({
+    chain: { id: chainId, name: 'Custom', network: 'custom', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: [url] } } },
+    transport: http(url),
+  })
+}
 
 /**
  * Hook to manage wallet state including balances and connection status
@@ -23,15 +35,17 @@ export function useWalletState(
    */
   const fetchNativeBalance = useCallback(async (
     address: Address,
-    chainId: number
+    chainId: number,
+    rpcUrl?: string,
   ): Promise<NativeBalance | undefined> => {
     try {
-      // This would typically use wagmi/viem to fetch balance
-      // For now, we'll return a placeholder
+      const client = getPublicClient(chainId, rpcUrl)
+      const balance = await client.getBalance({ address })
+      // TODO: Optionally fetch symbol from chain config
       return {
-        balance: 0n,
-        formatted: '0',
-        symbol: 'ETH', // This should be determined by chain
+        balance,
+        formatted: formatUnits(balance, 18),
+        symbol: 'ETH',
       }
     } catch (error) {
       console.error('Failed to fetch native balance:', error)
@@ -44,16 +58,40 @@ export function useWalletState(
    */
   const fetchTokenBalances = useCallback(async (
     address: Address,
-    tokens: Erc20[]
+    tokens: Erc20[],
+    chainId?: number,
+    rpcUrl?: string,
   ): Promise<TokenBalance[]> => {
     try {
-      // This would typically use wagmi/viem to fetch token balances
-      // For now, we'll return placeholders
-      return tokens.map(token => ({
-        token,
-        balance: 0n,
-        formatted: formatBalance(0n, token.decimals),
+      if (!tokens.length) return []
+      const client = getPublicClient(chainId || 1, rpcUrl)
+      // ERC-20 ABI fragment for balanceOf
+      const erc20Abi = [
+        { "constant": true, "inputs": [{ "name": "owner", "type": "address" }], "name": "balanceOf", "outputs": [{ "name": "balance", "type": "uint256" }], "type": "function" }
+      ]
+      const balances = await Promise.all(tokens.map(async (token) => {
+        try {
+          const [balance] = await client.readContract({
+            address: token.address,
+            abi: erc20Abi,
+            functionName: 'balanceOf',
+            args: [address],
+          })
+          return {
+            token,
+            balance: BigInt(balance),
+            formatted: formatUnits(BigInt(balance), token.decimals),
+          }
+        } catch (error) {
+          console.error(`Failed to fetch balance for token ${token.symbol}:`, error)
+          return {
+            token,
+            balance: 0n,
+            formatted: '0',
+          }
+        }
       }))
+      return balances
     } catch (error) {
       console.error('Failed to fetch token balances:', error)
       return []
@@ -88,7 +126,7 @@ export function useWalletState(
 
       const [nativeBalance, tokenBalances] = await Promise.all([
         fetchNativeBalance(address, chainId),
-        fetchTokenBalances(address, tokens),
+        fetchTokenBalances(address, tokens, chainId),
       ])
 
       setState({

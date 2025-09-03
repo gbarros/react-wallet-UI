@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { PenTool, Copy, Check, AlertCircle } from 'lucide-react'
 import type { LocaleStrings } from '../types'
 import type { UnifiedWalletAdapter } from '../adapters'
@@ -98,7 +98,7 @@ export function SignTab({ adapter, strings, onSign }: SignTabProps) {
         ) : (
           <>
             <PenTool className="h-4 w-4 mr-2" />
-            {strings.sign}
+            {strings.signButton}
           </>
         )}
       </Button>

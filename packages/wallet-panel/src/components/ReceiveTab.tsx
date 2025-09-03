@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Copy, Check, QrCode } from 'lucide-react'
-import type { Address } from 'viem'
+import type { Address } from '../types'
 import type { LocaleStrings } from '../types'
 import { Button } from './ui/button'
 import { Input } from './ui/input'

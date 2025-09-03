@@ -1,22 +1,25 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { UnifiedWalletAdapter } from '../unified'
 import { mockPrivyClient, mockZeroDevContext, mockDisconnectedPrivyClient } from '../../test/mocks'
 
 describe('UnifiedWalletAdapter', () => {
   describe('initialization', () => {
-    it('should create adapter with Privy only', () => {
+    it('should create adapter with Privy only', async () => {
       const adapter = new UnifiedWalletAdapter(mockPrivyClient)
-      expect(adapter.mode).toBe('privy-only')
+      const info = await adapter.getWalletInfo()
+      expect(info.mode).toBe('privy-only')
     })
 
-    it('should create adapter with ZeroDev only', () => {
+    it('should create adapter with ZeroDev only', async () => {
       const adapter = new UnifiedWalletAdapter(undefined, mockZeroDevContext)
-      expect(adapter.mode).toBe('zerodev-only')
+      const info = await adapter.getWalletInfo()
+      expect(info.mode).toBe('zerodev-only')
     })
 
-    it('should create adapter with both providers', () => {
+    it('should create adapter with both providers', async () => {
       const adapter = new UnifiedWalletAdapter(mockPrivyClient, mockZeroDevContext)
-      expect(adapter.mode).toBe('unified')
+      const info = await adapter.getWalletInfo()
+      expect(info.mode).toBe('unified')
     })
 
     it('should throw error with no providers', () => {
@@ -33,7 +36,7 @@ describe('UnifiedWalletAdapter', () => {
 
     it('should report not ready when Privy is disconnected', () => {
       const adapter = new UnifiedWalletAdapter(mockDisconnectedPrivyClient)
-      expect(adapter.isReady()).toBe(true) // ready but not authenticated
+      expect(adapter.isReady()).toBe(false) // not authenticated
       expect(adapter.isConnected()).toBe(false)
     })
 

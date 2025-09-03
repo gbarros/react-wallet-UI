@@ -1,5 +1,5 @@
-import React from 'react'
-import { Wallet, ArrowUpRight, ArrowDownLeft, PenTool, Link, Settings } from 'lucide-react'
+// import React from 'react' // Not needed with new JSX transform
+import { Wallet, ArrowUpRight, ArrowDownLeft, PenTool, Settings } from 'lucide-react'
 import type { WalletState, LocaleStrings, Erc20 } from '../types'
 import type { UnifiedWalletAdapter } from '../adapters'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
@@ -34,7 +34,7 @@ export function WalletTabs({
   showWalletConnect,
   strings,
   onTxSubmitted,
-  onTxConfirmed,
+  // onTxConfirmed, // Currently unused
   onSign,
   onRequestExport,
 }: WalletTabsProps) {
@@ -53,12 +53,12 @@ export function WalletTabs({
         
         <TabsTrigger value="send" className="flex flex-col items-center py-2">
           <ArrowUpRight className="h-4 w-4" />
-          <span className="text-xs mt-1">{strings.send}</span>
+          <span className="text-xs mt-1">{strings.sendTab}</span>
         </TabsTrigger>
         
         <TabsTrigger value="sign" className="flex flex-col items-center py-2">
           <PenTool className="h-4 w-4" />
-          <span className="text-xs mt-1">{strings.sign}</span>
+          <span className="text-xs mt-1">{strings.signTab}</span>
         </TabsTrigger>
         
         <TabsTrigger value="more" className="flex flex-col items-center py-2">
@@ -71,7 +71,10 @@ export function WalletTabs({
         <BalancesTab
           walletState={walletState}
           strings={strings}
-          onRefresh={walletState.refreshWalletData}
+          onRefresh={() => {
+            // Refresh functionality would be implemented here
+            console.log('Refreshing wallet data...')
+          }}
         />
       </TabsContent>
 

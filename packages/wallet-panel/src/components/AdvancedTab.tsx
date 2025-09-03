@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react'
-import { Settings, ExternalLink, Eye, EyeOff, ChevronDown, ChevronRight } from 'lucide-react'
-import type { Address } from 'viem'
+import { useState, useEffect } from 'react'
+import { ExternalLink, ChevronDown, ChevronRight } from 'lucide-react'
+import type { Address } from '../types'
 import type { LocaleStrings } from '../types'
 import type { UnifiedWalletAdapter } from '../adapters'
 import { Button } from './ui/button'
@@ -46,8 +46,11 @@ export function AdvancedTab({
     loadWalletInfo()
   }, [adapter])
 
-  const handleToggleAccountType = (useSmartAccount: boolean) => {
-    if (!adapter || adapter.mode === 'privy-only') return
+  const handleToggleAccountType = async (useSmartAccount: boolean) => {
+    if (!adapter) return
+    
+    const info = await adapter.getWalletInfo()
+    if (info.mode === 'privy-only') return
     
     try {
       adapter.setPreferSmartAccount(useSmartAccount)
