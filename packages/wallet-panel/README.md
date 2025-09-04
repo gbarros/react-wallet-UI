@@ -21,7 +21,34 @@ npm install @walletconnect/modal  # For WalletConnect support
 
 ## Quick Start
 
-### Inline Panel
+The WalletPanel component supports two usage patterns:
+
+### 1. Simple Configuration (Recommended for most users)
+Just provide your Privy App ID and ZeroDev Project ID:
+
+```tsx
+import { PrivyProvider } from '@privy-io/react-auth'
+import { WalletPanel } from '@wallet-panel/react'
+
+function App() {
+  return (
+    <PrivyProvider appId="your-privy-app-id">
+      <WalletPanel
+        config={{
+          privyAppId: "your-privy-app-id",
+          zerodevProjectId: "your-zerodev-project-id"
+        }}
+        enableSponsoredTx={true}
+        showWalletConnect={true}
+      />
+    </PrivyProvider>
+  )
+}
+```
+
+### 2. Advanced Configuration (For complex integrations)
+Provide pre-configured clients for full control:
+
 ```tsx
 import { WalletPanel } from '@wallet-panel/react'
 
@@ -29,6 +56,7 @@ function App() {
   return (
     <WalletPanel
       privyClient={privyClient}
+      zerodev={zerodevContext}
       onRequestLogin={() => openPrivyLogin()}
     />
   )
@@ -42,9 +70,11 @@ import { WalletTrigger } from '@wallet-panel/react'
 function App() {
   return (
     <WalletTrigger
-      privyClient={privyClient}
+      config={{
+        privyAppId: "your-privy-app-id",
+        zerodevProjectId: "your-zerodev-project-id"
+      }}
       modalTitle="My Wallet"
-      onRequestLogin={() => openPrivyLogin()}
     />
   )
 }
@@ -56,10 +86,13 @@ function App() {
 
 ```tsx
 interface WalletPanelProps {
-  // Providers
+  // Advanced: Provide pre-configured clients (existing approach)
   privyClient?: PrivyClientLike
   zerodev?: ZeroDevContextLike
   wagmiConfig?: Config
+
+  // Simple: Just provide configuration IDs (new approach)
+  config?: SimpleWalletConfig
 
   // UI/UX toggles
   showChainSelector?: boolean
@@ -86,6 +119,23 @@ interface WalletPanelProps {
   
   // For testing/integration
   adapter?: any
+}
+
+interface SimpleWalletConfig {
+  // Simple configuration - just provide the IDs
+  privyAppId?: string
+  zerodevProjectId?: string
+  
+  // Optional: Custom RPC URLs (will use defaults if not provided)
+  customRpcUrls?: {
+    [chainId: number]: string
+  }
+  
+  // Optional: WalletConnect project ID
+  walletConnectProjectId?: string
+  
+  // Optional: Default chain (will use sepolia if not provided)
+  defaultChainId?: number
 }
 ```
 
@@ -138,18 +188,55 @@ type Erc20 = {
 
 ## Examples
 
-### Privy + ZeroDev Integration
+### Simple Configuration (Recommended)
+
+```tsx
+import { PrivyProvider } from '@privy-io/react-auth'
+import { WalletPanel } from '@wallet-panel/react'
+
+function App() {
+  return (
+    <PrivyProvider appId="your-privy-app-id">
+      <WalletPanel
+        config={{
+          privyAppId: "your-privy-app-id",
+          zerodevProjectId: "your-zerodev-project-id",
+          // Optional: Custom chain configuration
+          defaultChainId: 11155111, // Sepolia
+          customRpcUrls: {
+            11155111: "https://sepolia.gateway.tenderly.co"
+          },
+          // Optional: WalletConnect support
+          walletConnectProjectId: "your-walletconnect-project-id"
+        }}
+        enableSponsoredTx={true}
+        showWalletConnect={true}
+        tokens={[
+          { address: '0xA0b86a33E6441c8C7c7b0b8b0b8b0b8b0b8b0b8b', symbol: 'USDC', decimals: 6 }
+        ]}
+        onTxSubmitted={(hash) => console.log('Transaction:', hash)}
+        onSign={(signature, message) => console.log('Signed:', { signature, message })}
+      />
+    </PrivyProvider>
+  )
+}
+```
+
+### Advanced Configuration (For Complex Integrations)
 
 ```tsx
 import { PrivyProvider, usePrivy } from '@privy-io/react-auth'
-import { WalletPanel, WalletTrigger } from '@wallet-panel/react'
+import { WalletPanel } from '@wallet-panel/react'
+import { useZeroDev } from './hooks/useZeroDev' // See apps/demo/src/hooks/useZeroDev.ts for implementation
 
 function WalletComponent() {
   const privyClient = usePrivy()
+  const zeroDevContext = useZeroDev()
   
   return (
     <WalletPanel
       privyClient={privyClient}
+      zerodev={zeroDevContext}
       enableSponsoredTx
       showWalletConnect
       tokens={[

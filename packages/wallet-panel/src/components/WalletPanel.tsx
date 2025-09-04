@@ -3,6 +3,7 @@ import type { WalletPanelProps, LocaleStrings } from '../types'
 import { DEFAULT_LOCALE_STRINGS } from '../types'
 import { useWalletAdapter } from '../hooks/useWalletAdapter'
 import { useWalletState } from '../hooks/useWalletState'
+import { useSimpleWalletSetup } from '../hooks/useSimpleWalletSetup'
 import { cn } from '../lib/utils'
 import { WalletHeader } from './WalletHeader'
 import { WalletTabs } from './WalletTabs'
@@ -15,6 +16,7 @@ import { ConnectPrompt } from './ConnectPrompt'
 export function WalletPanel({
   privyClient,
   zerodev,
+  config,
   showChainSelector = true,
   showWalletConnect = true,
   chains = [],
@@ -35,8 +37,20 @@ export function WalletPanel({
     [localeStrings]
   )
 
+  // Set up simple wallet configuration if provided
+  const simpleWalletSetup = useSimpleWalletSetup(config)
+  
+  // Determine which clients to use: provided ones or built from simple config
+  const effectivePrivyClient = useMemo(() => {
+    return privyClient || undefined // Simple config requires PrivyProvider at app level
+  }, [privyClient])
+  
+  const effectiveZerodev = useMemo(() => {
+    return zerodev || simpleWalletSetup.zeroDevContext || undefined
+  }, [zerodev, simpleWalletSetup.zeroDevContext])
+
   // Always call useWalletAdapter hook (Rules of Hooks)
-  const walletAdapterResult = useWalletAdapter(privyClient, zerodev)
+  const walletAdapterResult = useWalletAdapter(effectivePrivyClient, effectiveZerodev)
   
   // Use injected adapter if provided (for integration/testing), otherwise use hook result
   const adapterResult = useMemo(() => {

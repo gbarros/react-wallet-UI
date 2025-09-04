@@ -8,23 +8,36 @@ import {
 import { signerToEcdsaValidator } from '@zerodev/ecdsa-validator'
 import { constants } from '@zerodev/sdk'
 import { http, createPublicClient, EIP1193Provider } from 'viem'
-import { sepolia } from 'viem/chains'
-import type { ZeroDevContextLike } from '../../../../packages/wallet-panel/src/types'
+import { sepolia, mainnet, polygon, base, type Chain } from 'viem/chains'
+import type { SimpleWalletConfig, ZeroDevContextLike } from '../types'
 
-// Environment configuration
-const ZERODEV_PROJECT_ID = import.meta.env.VITE_ZERODEV_PROJECT_ID
-const ZERODEV_BUNDLER_RPC = import.meta.env.VITE_ZERODEV_BUNDLER_RPC
-const ZERODEV_PAYMASTER_RPC = import.meta.env.VITE_ZERODEV_PAYMASTER_RPC
+// Chain mapping
+const CHAIN_MAP: Record<number, Chain> = {
+  [sepolia.id]: sepolia,
+  [mainnet.id]: mainnet,
+  [polygon.id]: polygon,
+  [base.id]: base,
+}
 
-// Extended interface for demo-specific functionality
-export interface ZeroDevContext extends ZeroDevContextLike {
+// Default RPC URLs for common chains
+const DEFAULT_RPC_URLS: Record<number, string> = {
+  [sepolia.id]: 'https://eth-sepolia.g.alchemy.com/v2/demo',
+  [mainnet.id]: 'https://eth.llamarpc.com',
+  [polygon.id]: 'https://polygon.llamarpc.com',
+  [base.id]: 'https://base.llamarpc.com',
+}
+
+interface SimpleZeroDevContext extends ZeroDevContextLike {
   kernelClient: ReturnType<typeof createKernelAccountClient> | null
   isLoading: boolean
   error: string | null
   connect: () => Promise<void>
 }
 
-export function useZeroDev(): ZeroDevContext {
+/**
+ * Hook to create ZeroDev context from simple configuration
+ */
+function useSimpleZeroDev(config: SimpleWalletConfig): SimpleZeroDevContext {
   const { wallets } = useWallets()
   
   const [kernelClient, setKernelClient] = useState<ReturnType<typeof createKernelAccountClient> | null>(null)
@@ -33,15 +46,26 @@ export function useZeroDev(): ZeroDevContext {
   const [error, setError] = useState<string | null>(null)
   const [hasBeenDisconnected, setHasBeenDisconnected] = useState(false)
 
-  // Check if environment is properly configured
-  const envConfigured = useMemo(() => 
-    !!ZERODEV_PROJECT_ID && !!ZERODEV_BUNDLER_RPC && !!ZERODEV_PAYMASTER_RPC,
-    []
-  )
+  // Build configuration from simple config
+  const zeroDevConfig = useMemo(() => {
+    if (!config.zerodevProjectId) return null
+    
+    const chainId = config.defaultChainId || sepolia.id
+    const rpcUrl = config.customRpcUrls?.[chainId] || DEFAULT_RPC_URLS[chainId]
+    
+    return {
+      projectId: config.zerodevProjectId,
+      bundlerRpc: `https://rpc.zerodev.app/api/v2/bundler/${config.zerodevProjectId}`,
+      paymasterRpc: `https://rpc.zerodev.app/api/v2/paymaster/${config.zerodevProjectId}`,
+      chainId,
+      rpcUrl,
+      chain: CHAIN_MAP[chainId] || sepolia,
+    }
+  }, [config.zerodevProjectId, config.defaultChainId, config.customRpcUrls])
 
   const setupSmartAccount = useCallback(async () => {
-    if (!envConfigured) {
-      setError('ZeroDev environment variables not configured')
+    if (!zeroDevConfig) {
+      setError('ZeroDev configuration not provided')
       return
     }
 
@@ -58,11 +82,9 @@ export function useZeroDev(): ZeroDevContext {
       const provider = await embedded.getEthereumProvider()
       const signer = provider as EIP1193Provider
 
-      // Use sepolia for demo (can be made configurable)
-      const chain = sepolia
       const publicClient = createPublicClient({ 
-        chain, 
-        transport: http(chain.rpcUrls.default.http[0]) 
+        chain: zeroDevConfig.chain, 
+        transport: http(zeroDevConfig.rpcUrl) 
       })
 
       // Configure EntryPoint and Kernel version
@@ -84,15 +106,15 @@ export function useZeroDev(): ZeroDevContext {
 
       // Configure ZeroDev Paymaster client
       const paymaster = createZeroDevPaymasterClient({
-        chain,
-        transport: http(ZERODEV_PAYMASTER_RPC),
+        chain: zeroDevConfig.chain,
+        transport: http(zeroDevConfig.paymasterRpc),
       })
 
       // Create Kernel client
       const client = createKernelAccountClient({
         account,
-        chain,
-        bundlerTransport: http(ZERODEV_BUNDLER_RPC),
+        chain: zeroDevConfig.chain,
+        bundlerTransport: http(zeroDevConfig.bundlerRpc),
         paymaster,
       })
 
@@ -105,7 +127,7 @@ export function useZeroDev(): ZeroDevContext {
     } finally {
       setIsLoading(false)
     }
-  }, [wallets, envConfigured])
+  }, [wallets, zeroDevConfig])
 
   // Reset state when wallets are disconnected
   useEffect(() => {
@@ -118,14 +140,14 @@ export function useZeroDev(): ZeroDevContext {
     }
   }, [wallets.length])
 
-  // Setup smart account when wallets are available (but not if previously disconnected)
+  // Setup smart account when wallets are available
   useEffect(() => {
-    if (wallets.length > 0 && envConfigured && !hasBeenDisconnected) {
+    if (wallets.length > 0 && zeroDevConfig && !hasBeenDisconnected) {
       setupSmartAccount()
-    } else if (!envConfigured) {
-      setError('ZeroDev environment variables not configured')
+    } else if (!zeroDevConfig) {
+      setError('ZeroDev configuration not provided')
     }
-  }, [wallets, setupSmartAccount, envConfigured, hasBeenDisconnected])
+  }, [wallets, setupSmartAccount, zeroDevConfig, hasBeenDisconnected])
 
   const sendUserOperation = useCallback(async (tx: any) => {
     if (!kernelClient) {
@@ -140,7 +162,7 @@ export function useZeroDev(): ZeroDevContext {
 
       return {
         hash: hash as string,
-        userOpHash: hash as string, // ZeroDev returns the user operation hash
+        userOpHash: hash as string,
       }
     } catch (error) {
       console.error('Send user operation error:', error)
@@ -149,21 +171,19 @@ export function useZeroDev(): ZeroDevContext {
   }, [kernelClient])
 
   const switchChain = useCallback(async (chainId: number) => {
-    // For now, just log the chain switch request
-    // In a full implementation, you'd recreate the client with the new chain
     console.log('Switch chain requested:', chainId)
+    // In a full implementation, you'd recreate the client with the new chain
   }, [])
 
-  // Add a manual connect function to allow reconnection after disconnect
   const connect = useCallback(async () => {
     setHasBeenDisconnected(false)
-    if (wallets.length > 0 && envConfigured) {
+    if (wallets.length > 0 && zeroDevConfig) {
       await setupSmartAccount()
     }
-  }, [wallets, envConfigured, setupSmartAccount])
+  }, [wallets, zeroDevConfig, setupSmartAccount])
 
   return {
-    projectId: ZERODEV_PROJECT_ID || '',
+    projectId: zeroDevConfig?.projectId || '',
     isConnected: !!kernelClient && !!address,
     address,
     sendUserOperation,
@@ -171,6 +191,48 @@ export function useZeroDev(): ZeroDevContext {
     kernelClient,
     isLoading,
     error,
-    connect, // Add connect method for manual reconnection
+    connect,
+  }
+}
+
+/**
+ * Hook to set up wallet clients from simple configuration
+ */
+export function useSimpleWalletSetup(config?: SimpleWalletConfig) {
+  // Create ZeroDev context if configuration is provided
+  const zeroDevContext = useSimpleZeroDev(config || {})
+  
+  // For Privy, we can't create the client here since it needs to be at the provider level
+  // Instead, we return configuration that can be used by the parent component
+  const privyConfig = useMemo(() => {
+    if (!config?.privyAppId) return null
+    
+    return {
+      appId: config.privyAppId,
+      config: {
+        embeddedWallets: {
+          createOnLogin: 'users-without-wallets' as const,
+          requireUserPasswordOnCreate: false,
+        },
+        supportedChains: [sepolia, mainnet, polygon, base],
+        appearance: {
+          theme: 'light' as const,
+          accentColor: '#676FFF',
+        },
+        ...(config.walletConnectProjectId && {
+          externalWallets: {
+            walletConnect: {
+              projectId: config.walletConnectProjectId,
+            },
+          },
+        }),
+      },
+    }
+  }, [config?.privyAppId, config?.walletConnectProjectId])
+
+  return {
+    zeroDevContext: config?.zerodevProjectId ? zeroDevContext : null,
+    privyConfig,
+    isConfigured: !!(config?.privyAppId || config?.zerodevProjectId),
   }
 }

@@ -262,12 +262,33 @@ export interface ZeroDevContextLike {
   switchChain(chainId: number): Promise<void>
 }
 
+// Configuration for simple setup
+export interface SimpleWalletConfig {
+  // Simple configuration - just provide the IDs
+  privyAppId?: string
+  zerodevProjectId?: string
+  
+  // Optional: Custom RPC URLs (will use defaults if not provided)
+  customRpcUrls?: {
+    [chainId: number]: string
+  }
+  
+  // Optional: WalletConnect project ID
+  walletConnectProjectId?: string
+  
+  // Optional: Default chain (will use sepolia if not provided)
+  defaultChainId?: number
+}
+
 // Main component props
 export interface WalletPanelProps {
-  // Providers
+  // Advanced: Provide pre-configured clients (existing approach)
   privyClient?: PrivyClientLike
   zerodev?: ZeroDevContextLike
   wagmiConfig?: any
+
+  // Simple: Just provide configuration IDs (new approach)
+  config?: SimpleWalletConfig
 
   // UI/UX toggles
   showChainSelector?: boolean

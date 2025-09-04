@@ -11,6 +11,11 @@ export type {
   LocaleStrings,
   WalletState,
   SendFormData,
+  SimpleWalletConfig,
+  PrivyClientLike,
+  ZeroDevContextLike,
+  WalletSigner,
+  SmartAccountSigner,
 } from './types'
 
 // Adapters (for advanced usage)
@@ -24,6 +29,7 @@ export {
 // Hooks (for custom implementations)
 export { useWalletAdapter } from './hooks/useWalletAdapter'
 export { useWalletState } from './hooks/useWalletState'
+export { useSimpleWalletSetup } from './hooks/useSimpleWalletSetup'
 
 // Utilities
 export {
