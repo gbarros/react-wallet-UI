@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Copy, Check } from 'lucide-react'
+import { Copy, Check, LogOut } from 'lucide-react'
 import type { Address } from '../types'
 import type { ChainConfig, LocaleStrings } from '../types'
 import { Button } from './ui/button'
@@ -14,6 +14,7 @@ interface WalletHeaderProps {
   chains: ChainConfig[]
   strings: LocaleStrings
   onChainChange: (chainId: number) => void
+  onDisconnect?: () => void
 }
 
 /**
@@ -27,6 +28,7 @@ export function WalletHeader({
   chains,
   strings,
   onChainChange,
+  onDisconnect,
 }: WalletHeaderProps) {
   const [copied, setCopied] = useState(false)
 
@@ -49,7 +51,7 @@ export function WalletHeader({
           {/* Identicon */}
           <div 
             className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold"
-            style={{ backgroundColor: generateIdenticon(address || '') }}
+            style={{ backgroundColor: generateIdenticon(address || '0x0000000000000000000000000000000000000000') }}
           >
             {address ? address.slice(2, 4).toUpperCase() : '??'}
           </div>
@@ -79,6 +81,19 @@ export function WalletHeader({
             </div>
           </div>
         </div>
+
+        {/* Disconnect button */}
+        {onDisconnect && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={onDisconnect}
+            title="Disconnect"
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
       {/* Chain selector */}

@@ -11,7 +11,7 @@ npm install @wallet-panel/react
 ### Peer Dependencies
 
 ```bash
-npm install react react-dom @privy-io/react-auth @zerodev/waas wagmi viem
+npm install react react-dom @privy-io/react-auth @zerodev/sdk wagmi viem
 ```
 
 Optional peer dependencies:
@@ -21,6 +21,7 @@ npm install @walletconnect/modal  # For WalletConnect support
 
 ## Quick Start
 
+### Inline Panel
 ```tsx
 import { WalletPanel } from '@wallet-panel/react'
 
@@ -28,6 +29,21 @@ function App() {
   return (
     <WalletPanel
       privyClient={privyClient}
+      onRequestLogin={() => openPrivyLogin()}
+    />
+  )
+}
+```
+
+### Modal Overlay
+```tsx
+import { WalletTrigger } from '@wallet-panel/react'
+
+function App() {
+  return (
+    <WalletTrigger
+      privyClient={privyClient}
+      modalTitle="My Wallet"
       onRequestLogin={() => openPrivyLogin()}
     />
   )
@@ -65,14 +81,46 @@ interface WalletPanelProps {
   onRequestExport?: () => void
 
   // i18n
-  localeStrings?: Record<string, string>
+  localeStrings?: Partial<LocaleStrings>
   className?: string
+  
+  // For testing/integration
+  adapter?: any
+}
+```
+
+### Components
+
+#### WalletPanel
+Main wallet component for inline display.
+
+#### WalletTrigger
+Button component that opens wallet in a modal overlay.
+
+```tsx
+interface WalletTriggerProps extends WalletPanelProps {
+  trigger?: React.ReactNode  // Custom trigger button
+  modalTitle?: string        // Modal header title
+}
+```
+
+#### WalletModal
+Direct modal component for custom implementations.
+
+```tsx
+interface WalletModalProps extends WalletPanelProps {
+  isOpen: boolean
+  onClose: () => void
+  title?: string
 }
 ```
 
 ### Types
 
 ```tsx
+// Re-exported from viem to avoid conflicts
+export type { Address, Hex, Hash, TransactionRequest } from 'viem'
+
 type ChainConfig = {
   id: number
   rpcUrl?: string
@@ -93,24 +141,101 @@ type Erc20 = {
 ### Privy + ZeroDev Integration
 
 ```tsx
-import { PrivyProvider } from '@privy-io/react-auth'
-import { ZeroDevProvider } from '@zerodev/waas'
-import { WalletPanel } from '@wallet-panel/react'
+import { PrivyProvider, usePrivy } from '@privy-io/react-auth'
+import { WalletPanel, WalletTrigger } from '@wallet-panel/react'
+
+function WalletComponent() {
+  const privyClient = usePrivy()
+  
+  return (
+    <WalletPanel
+      privyClient={privyClient}
+      enableSponsoredTx
+      showWalletConnect
+      tokens={[
+        { address: '0xA0b86a33E6441c8C7c7b0b8b0b8b0b8b0b8b0b8b', symbol: 'USDC', decimals: 6 }
+      ]}
+      onRequestLogin={() => privyClient.login()}
+    />
+  )
+}
 
 function App() {
   return (
     <PrivyProvider appId="your-privy-app-id">
-      <ZeroDevProvider projectId="your-zerodev-project-id">
-        <WalletPanel
-          enableSponsoredTx
-          showWalletConnect
-          tokens={[
-            { address: '0xA0b86a33E6441c8C7c7b0b8b0b8b0b8b0b8b0b8b', symbol: 'USDC', decimals: 6 }
-          ]}
-          onRequestLogin={() => openPrivyLogin()}
-        />
-      </ZeroDevProvider>
+      <WalletComponent />
     </PrivyProvider>
+  )
+}
+```
+
+### With ZeroDev Smart Accounts
+
+```tsx
+import { PrivyProvider, usePrivy } from '@privy-io/react-auth'
+import { WalletPanel } from '@wallet-panel/react'
+import { createKernelAccount, createKernelAccountClient, createEcdsaKernelSmartAccount } from '@zerodev/sdk'
+import { ENTRYPOINT_ADDRESS_V07 } from 'permissionless'
+import { createPublicClient, http } from 'viem'
+import { sepolia } from 'viem/chains'
+import { useState, useEffect } from 'react'
+
+function WalletComponent() {
+  const privyClient = usePrivy()
+  const [zerodevClient, setZerodevClient] = useState(null)
+
+  useEffect(() => {
+    if (privyClient.authenticated && privyClient.user?.wallet) {
+      const initZeroDev = async () => {
+        const publicClient = createPublicClient({
+          chain: sepolia,
+          transport: http()
+        })
+
+        const ecdsaAccount = await createEcdsaKernelSmartAccount(publicClient, {
+          entryPoint: ENTRYPOINT_ADDRESS_V07,
+          signer: privyClient.getEthereumProvider()
+        })
+
+        const account = await createKernelAccount(publicClient, {
+          plugins: {
+            sudo: ecdsaAccount
+          }
+        })
+
+        const kernelClient = createKernelAccountClient({
+          account,
+          chain: sepolia,
+          bundlerTransport: http(process.env.VITE_ZERODEV_BUNDLER_RPC),
+          middleware: {
+            sponsorUserOperation: async ({ userOperation }) => {
+              // Add paymaster sponsorship logic
+              return userOperation
+            }
+          }
+        })
+
+        setZerodevClient({
+          isConnected: true,
+          address: account.address,
+          sendUserOperation: kernelClient.sendUserOperation,
+          switchChain: async (chainId) => {
+            // Implement chain switching logic
+          }
+        })
+      }
+
+      initZeroDev().catch(console.error)
+    }
+  }, [privyClient.authenticated, privyClient.user])
+  
+  return (
+    <WalletPanel
+      privyClient={privyClient}
+      zerodev={zerodevClient}
+      enableSponsoredTx
+      onRequestLogin={() => privyClient.login()}
+    />
   )
 }
 ```
@@ -135,11 +260,27 @@ const chains = [
   { id: 1, name: 'Ethereum', logoUrl: '/ethereum-logo.png' },
   { id: 137, name: 'Polygon', logoUrl: '/polygon-logo.png' },
   { id: 8453, name: 'Base', logoUrl: '/base-logo.png' },
+  { id: 11155111, name: 'Sepolia', rpcUrl: 'https://sepolia.gateway.tenderly.co' },
 ]
 
 <WalletPanel
   chains={chains}
   showChainSelector={true}
+/>
+```
+
+### Modal vs Inline Display
+
+```tsx
+// Inline panel (embedded in your UI)
+<WalletPanel privyClient={privy} zerodev={zerodev} />
+
+// Modal overlay (avoids UI conflicts)
+<WalletTrigger 
+  privyClient={privy} 
+  zerodev={zerodev}
+  trigger={<button>Open Wallet</button>}
+  modalTitle="My App Wallet"
 />
 ```
 

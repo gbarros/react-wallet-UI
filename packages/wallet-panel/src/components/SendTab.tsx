@@ -31,6 +31,7 @@ export function SendTab({
 }: SendTabProps) {
   const [formData, setFormData] = useState<SendFormData>({
     to: '',
+    recipient: '',
     amount: '',
     asset: 'native',
     useSponsored: enableSponsoredTx,
@@ -132,7 +133,7 @@ export function SendTab({
       
       // Set sponsored mode if enabled
       if (enableSponsoredTx && adapter.isSponsoredEnabled() !== formData.useSponsored) {
-        adapter.setSponsored(formData.useSponsored)
+        adapter.setSponsored(formData.useSponsored || false)
       }
       
       const result = await adapter.sendTransaction(txRequest)
@@ -142,6 +143,7 @@ export function SendTab({
       // Reset form on success
       setFormData({
         to: '',
+        recipient: '',
         amount: '',
         asset: 'native',
         useSponsored: enableSponsoredTx,

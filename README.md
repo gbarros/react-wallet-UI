@@ -1,6 +1,6 @@
 # React Wallet Panel
 
-A production-ready, drop-in React/TypeScript wallet component that provides essential wallet functionality while abstracting over Privy (auth + embedded wallet) and ZeroDev (AA smart account). Designed to feel like a plug-in with minimal setup, optional features, and safe defaults.
+A production-ready, drop-in React/TypeScript wallet component that provides essential wallet functionality while abstracting over Privy (auth + embedded wallet) and ZeroDev (AA smart account). Designed to feel like a plug-in with minimal setup, optional features, and safe defaults. See `apps/demo-mockup/` - UI mockup demo without external dependencies.
 
 ## Features
 

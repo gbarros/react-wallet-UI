@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import type { PrivyClientLike, ZeroDevContextLike } from '../types'
 
 export const mockPrivyClient: PrivyClientLike = {

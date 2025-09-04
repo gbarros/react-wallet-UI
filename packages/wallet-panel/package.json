@@ -28,7 +28,11 @@
   "license": "MIT",
   "peerDependencies": {
     "react": "^18.0.0",
-    "react-dom": "^18.0.0"
+    "react-dom": "^18.0.0",
+    "@privy-io/react-auth": "^1.0.0",
+    "@zerodev/sdk": "^5.0.0",
+    "viem": "^2.0.0",
+    "wagmi": "^2.0.0"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.0.5",

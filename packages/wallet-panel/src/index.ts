@@ -1,5 +1,7 @@
-// Main exports
+// Main components
 export { WalletPanel } from './components/WalletPanel'
+export { WalletModal } from './components/WalletModal'
+export { WalletTrigger } from './components/WalletTrigger'
 
 // Types
 export type {

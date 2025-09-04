@@ -40,7 +40,7 @@ export function WalletTabs({
 }: WalletTabsProps) {
   return (
     <Tabs defaultValue="balances" className="w-full">
-      <TabsList className="grid w-full grid-cols-5 p-1">
+      <TabsList className="grid w-full grid-cols-5 border-b border-border">
         <TabsTrigger value="balances" className="flex flex-col items-center py-2">
           <Wallet className="h-4 w-4" />
           <span className="text-xs mt-1">{strings.balances}</span>
@@ -53,12 +53,12 @@ export function WalletTabs({
         
         <TabsTrigger value="send" className="flex flex-col items-center py-2">
           <ArrowUpRight className="h-4 w-4" />
-          <span className="text-xs mt-1">{strings.sendTab}</span>
+          <span className="text-xs mt-1">{strings.send}</span>
         </TabsTrigger>
         
         <TabsTrigger value="sign" className="flex flex-col items-center py-2">
           <PenTool className="h-4 w-4" />
-          <span className="text-xs mt-1">{strings.signTab}</span>
+          <span className="text-xs mt-1">{strings.sign}</span>
         </TabsTrigger>
         
         <TabsTrigger value="more" className="flex flex-col items-center py-2">

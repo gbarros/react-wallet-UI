@@ -45,14 +45,14 @@ export class ZeroDevAdapter extends BaseSmartAccountAdapter {
       throw new Error('No smart account address available')
     }
 
-    return this.context.address
+    return this.context.address as Address
   }
 
   /**
    * Get the EOA address (fallback to smart account if not available)
    */
   async getAddress(): Promise<Address> {
-    return this.getSmartAccountAddress()
+    return this.context.address as Address
   }
 
   /**
@@ -97,7 +97,7 @@ export class ZeroDevAdapter extends BaseSmartAccountAdapter {
       // ZeroDev typically returns both userOpHash and eventual txHash
       return {
         hash: result.hash as Hash,
-        userOpHash: result.userOpHash,
+        userOpHash: result.userOpHash as Hash,
       }
     } catch (error) {
       throw new Error(`Failed to send user operation: ${error}`)

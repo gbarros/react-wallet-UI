@@ -35,7 +35,10 @@ export function WalletPanel({
     [localeStrings]
   )
 
-  // Use injected adapter if provided (for integration/testing), otherwise useWalletAdapter
+  // Always call useWalletAdapter hook (Rules of Hooks)
+  const walletAdapterResult = useWalletAdapter(privyClient, zerodev)
+  
+  // Use injected adapter if provided (for integration/testing), otherwise use hook result
   const adapterResult = useMemo(() => {
     if (adapter) {
       // Simulate the return shape of useWalletAdapter
@@ -46,10 +49,10 @@ export function WalletPanel({
         isSmartAccountActive: adapter.isSmartAccountActive?.() ?? false,
       }
     }
-    return useWalletAdapter(privyClient, zerodev)
-  }, [adapter, privyClient, zerodev])
+    return walletAdapterResult
+  }, [adapter, walletAdapterResult])
 
-  const { adapter: activeAdapter, isReady, isConnected, isSmartAccountActive } = adapterResult
+  const { adapter: activeAdapter, isConnected, isSmartAccountActive } = adapterResult
   // Manage wallet state
   const walletState = useWalletState(activeAdapter, tokens)
 
@@ -76,7 +79,7 @@ export function WalletPanel({
         <ConnectPrompt
           onConnect={handleLogin}
           strings={strings}
-          isLoading={!isReady}
+          isLoading={false}
         />
       </div>
     )
@@ -84,7 +87,7 @@ export function WalletPanel({
 
   return (
     <div className={cn(
-      "wallet-panel bg-card border border-border rounded-lg w-full max-w-sm",
+      "wallet-panel bg-card border border-border rounded-lg w-full max-w-sm min-w-0",
       className
     )}>
       <WalletHeader
@@ -95,12 +98,21 @@ export function WalletPanel({
         chains={chains}
         strings={strings}
         onChainChange={async (chainId) => {
-          if (adapter) {
+          if (activeAdapter) {
             try {
-              await adapter.switchChain(chainId)
+              await activeAdapter.switchChain(chainId)
               await walletState.refreshWalletData()
             } catch (error) {
               console.error('Chain switch failed:', error)
+            }
+          }
+        }}
+        onDisconnect={async () => {
+          if (activeAdapter) {
+            try {
+              await activeAdapter.logout()
+            } catch (error) {
+              console.error('Logout failed:', error)
             }
           }
         }}
