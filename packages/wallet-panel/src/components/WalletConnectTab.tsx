@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, ExternalLink, AlertCircle } from 'lucide-react'
 import type { Address } from '../types'
 import type { LocaleStrings } from '../types'
@@ -19,12 +19,20 @@ export function WalletConnectTab({ address }: WalletConnectTabProps) {
   const [isConnecting, setIsConnecting] = useState(false)
   const [error, setError] = useState('')
   const [connectedSessions, setConnectedSessions] = useState<any[]>([])
+  const connectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Initialize WalletConnect modal (if available)
   useEffect(() => {
     // This would initialize WalletConnect modal
     // For now, we'll just simulate the functionality
     loadConnectedSessions()
+    return () => {
+      // Cleanup any pending simulated timers on unmount
+      if (connectTimeoutRef.current) {
+        clearTimeout(connectTimeoutRef.current)
+        connectTimeoutRef.current = null
+      }
+    }
   }, [])
 
   const loadConnectedSessions = async () => {
@@ -56,8 +64,14 @@ export function WalletConnectTab({ address }: WalletConnectTabProps) {
           // This is a simplified example - actual implementation would be more complex
           console.log('Connecting to WalletConnect URI:', wcUri)
           
-          // Simulate connection delay
-          await new Promise(resolve => setTimeout(resolve, 2000))
+          // Simulate connection delay. Use a very short delay in tests to avoid hanging.
+          const delayMs = (typeof process !== 'undefined' && process.env && process.env['NODE_ENV'] === 'test') ? 10 : 2000
+          await new Promise<void>((resolve) => {
+            connectTimeoutRef.current = setTimeout(() => {
+              resolve()
+              connectTimeoutRef.current = null
+            }, delayMs)
+          })
           
           // Clear URI on successful connection
           setWcUri('')

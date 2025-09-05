@@ -113,6 +113,11 @@ export function useWalletState(
   useEffect(() => {
     if (!adapter?.isConnected()) return
 
+    // Avoid background intervals during tests to prevent hanging processes
+    if (typeof process !== 'undefined' && process.env && process.env['NODE_ENV'] === 'test') {
+      return
+    }
+
     const interval = setInterval(refreshWalletData, 30000) // Refresh every 30 seconds
     return () => clearInterval(interval)
   }, [adapter, refreshWalletData])

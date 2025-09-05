@@ -1,0 +1,11 @@
+{
+  "lastUpdated": "2025-09-04T18:41:17.326Z",
+  "versions": {
+    "@privy-io/react-auth": "^1.0.0",
+    "@zerodev/sdk": "^5.0.0",
+    "viem": "^2.0.0",
+    "wagmi": "^2.0.0",
+    "@tanstack/react-query": "^5.0.0"
+  },
+  "note": "This file locks critical SDK versions. Update consciously when upgrading dependencies."
+}

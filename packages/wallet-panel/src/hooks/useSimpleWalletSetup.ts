@@ -144,36 +144,8 @@ function useSimpleZeroDev(config: SimpleWalletConfig): SimpleZeroDevContext {
   useEffect(() => {
     if (wallets.length > 0 && zeroDevConfig && !hasBeenDisconnected) {
       setupSmartAccount()
-    } else if (!zeroDevConfig) {
-      setError('ZeroDev configuration not provided')
     }
   }, [wallets, setupSmartAccount, zeroDevConfig, hasBeenDisconnected])
-
-  const sendUserOperation = useCallback(async (tx: any) => {
-    if (!kernelClient) {
-      throw new Error('Smart account not initialized')
-    }
-
-    try {
-      const hash = await kernelClient.sendUserOperation({
-        ...tx,
-        account: kernelClient.account!,
-      })
-
-      return {
-        hash: hash as string,
-        userOpHash: hash as string,
-      }
-    } catch (error) {
-      console.error('Send user operation error:', error)
-      throw error
-    }
-  }, [kernelClient])
-
-  const switchChain = useCallback(async (chainId: number) => {
-    console.log('Switch chain requested:', chainId)
-    // In a full implementation, you'd recreate the client with the new chain
-  }, [])
 
   const connect = useCallback(async () => {
     setHasBeenDisconnected(false)
@@ -182,25 +154,43 @@ function useSimpleZeroDev(config: SimpleWalletConfig): SimpleZeroDevContext {
     }
   }, [wallets, zeroDevConfig, setupSmartAccount])
 
-  return {
+  const result: SimpleZeroDevContext = {
     projectId: zeroDevConfig?.projectId || '',
     isConnected: !!kernelClient && !!address,
-    address,
-    sendUserOperation,
-    switchChain,
+    ...(address && { address }),
+    sendUserOperation: async (tx: any) => {
+      if (!kernelClient) {
+        throw new Error('Smart account not initialized')
+      }
+      const hash = await kernelClient.sendUserOperation({
+        ...tx,
+        account: kernelClient.account!,
+      })
+      return {
+        hash: hash as string,
+        userOpHash: hash as string,
+      }
+    },
+    switchChain: async (chainId: number) => {
+      console.log('Switch chain requested:', chainId)
+    },
     kernelClient,
     isLoading,
     error,
     connect,
   }
+  
+  return result
 }
 
 /**
  * Hook to set up wallet clients from simple configuration
  */
 export function useSimpleWalletSetup(config?: SimpleWalletConfig) {
-  // Create ZeroDev context if configuration is provided
-  const zeroDevContext = useSimpleZeroDev(config || {})
+  // Only create ZeroDev context if ZeroDev project ID is provided
+  // This prevents calling Privy hooks when no configuration is present
+  const shouldUseZeroDev = !!(config?.zerodevProjectId)
+  const zeroDevContext = shouldUseZeroDev ? useSimpleZeroDev(config!) : null
   
   // For Privy, we can't create the client here since it needs to be at the provider level
   // Instead, we return configuration that can be used by the parent component
@@ -231,7 +221,7 @@ export function useSimpleWalletSetup(config?: SimpleWalletConfig) {
   }, [config?.privyAppId, config?.walletConnectProjectId])
 
   return {
-    zeroDevContext: config?.zerodevProjectId ? zeroDevContext : null,
+    zeroDevContext,
     privyConfig,
     isConfigured: !!(config?.privyAppId || config?.zerodevProjectId),
   }

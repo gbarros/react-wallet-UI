@@ -191,7 +191,7 @@ export function AdvancedTab({
       )}
 
       {/* Debug info (development only) */}
-      {process.env.NODE_ENV === 'development' && walletInfo && (
+      {process.env['NODE_ENV'] === 'development' && walletInfo && (
         <div className="space-y-2">
           <div className="text-sm font-medium">Debug Info</div>
           <div className="p-3 bg-muted rounded-lg">

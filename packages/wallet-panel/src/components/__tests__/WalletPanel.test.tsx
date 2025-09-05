@@ -42,13 +42,13 @@ describe('WalletPanel', () => {
     })
 
     it('should show connect prompt when not connected', () => {
-      render(<WalletPanel />)
+      render(<WalletPanel config={{ privyAppId: 'test', zerodevProjectId: 'test' }} />)
       expect(screen.getByRole('button', { name: /connect wallet/i })).toBeInTheDocument()
     })
 
     it('should call onRequestLogin when connect button is clicked', () => {
       const onRequestLogin = vi.fn()
-      render(<WalletPanel onRequestLogin={onRequestLogin} />)
+      render(<WalletPanel config={{ privyAppId: 'test', zerodevProjectId: 'test' }} onRequestLogin={onRequestLogin} />)
       
       fireEvent.click(screen.getByRole('button', { name: /connect wallet/i }))
       expect(onRequestLogin).toHaveBeenCalled()
@@ -87,18 +87,18 @@ describe('WalletPanel', () => {
     })
 
     it('should render wallet interface', () => {
-      render(<WalletPanel />)
+      render(<WalletPanel config={{ privyAppId: 'test', zerodevProjectId: 'test' }} />)
       expect(screen.getByText('0x742d...d8b6')).toBeInTheDocument()
     })
 
     it('should show balance tab by default', () => {
-      render(<WalletPanel />)
+      render(<WalletPanel config={{ privyAppId: 'test', zerodevProjectId: 'test' }} />)
       expect(screen.getByRole('tab', { name: /balances/i })).toBeInTheDocument()
       expect(screen.getByText('1.0')).toBeInTheDocument()
     })
 
     it('should switch between tabs', async () => {
-      render(<WalletPanel />)
+      render(<WalletPanel config={{ privyAppId: 'test', zerodevProjectId: 'test' }} />)
       
       const sendTab = screen.getByRole('tab', { name: /send/i })
       const receiveTab = screen.getByRole('tab', { name: /receive/i })
@@ -137,12 +137,12 @@ describe('WalletPanel', () => {
     })
 
     it('should show smart account indicator', () => {
-      render(<WalletPanel />)
+      render(<WalletPanel config={{ privyAppId: 'test', zerodevProjectId: 'test' }} />)
       expect(screen.getByText(/smart account/i)).toBeInTheDocument()
     })
 
     it('should enable sponsored transactions when configured', () => {
-      render(<WalletPanel enableSponsoredTx={true} />)
+      render(<WalletPanel config={{ privyAppId: 'test', zerodevProjectId: 'test' }} enableSponsoredTx={true} />)
       
       fireEvent.click(screen.getByRole('tab', { name: /send/i }))
     })
@@ -170,7 +170,7 @@ describe('WalletPanel', () => {
         refreshWalletData: vi.fn(),
       })
 
-      render(<WalletPanel localeStrings={customStrings} />)
+      render(<WalletPanel config={{ privyAppId: 'test', zerodevProjectId: 'test' }} localeStrings={customStrings} />)
       expect(screen.getByRole('button', { name: /custom connect/i })).toBeInTheDocument()
     })
   })

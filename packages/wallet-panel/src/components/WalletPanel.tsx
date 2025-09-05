@@ -37,6 +37,32 @@ export function WalletPanel({
     [localeStrings]
   )
 
+  // Validate that we have either configuration or clients
+  const hasSimpleConfig = !!(config?.privyAppId || config?.zerodevProjectId)
+  const hasClients = !!(privyClient || zerodev)
+  const hasAdapter = !!adapter
+
+  if (!hasSimpleConfig && !hasClients && !hasAdapter) {
+    return (
+      <div className={cn(
+        "wallet-panel bg-card border border-border rounded-lg p-4 w-full max-w-sm",
+        className
+      )}>
+        <div className="text-center text-destructive">
+          <div className="text-sm font-medium mb-2">Configuration Required</div>
+          <div className="text-xs text-muted-foreground">
+            WalletPanel requires either:
+            <ul className="mt-2 text-left space-y-1">
+              <li>• Simple config (privyAppId + zerodevProjectId)</li>
+              <li>• Pre-configured clients (privyClient + zerodev)</li>
+              <li>• Injected adapter for testing</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // Set up simple wallet configuration if provided
   const simpleWalletSetup = useSimpleWalletSetup(config)
   

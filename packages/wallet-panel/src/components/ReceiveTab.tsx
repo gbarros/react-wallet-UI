@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Copy, Check, QrCode } from 'lucide-react'
 import type { Address } from '../types'
 import type { LocaleStrings } from '../types'
@@ -17,6 +17,7 @@ interface ReceiveTabProps {
 export function ReceiveTab({ address, strings }: ReceiveTabProps) {
   const [copied, setCopied] = useState(false)
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('')
+  const copyResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Generate QR code for the address
   useEffect(() => {
@@ -35,13 +36,27 @@ export function ReceiveTab({ address, strings }: ReceiveTabProps) {
     }).catch(console.error)
   }, [address])
 
+  // Cleanup any pending timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (copyResetTimeoutRef.current) {
+        clearTimeout(copyResetTimeoutRef.current)
+        copyResetTimeoutRef.current = null
+      }
+    }
+  }, [])
+
   const handleCopy = async () => {
     if (!address) return
     
     const success = await copyToClipboard(address)
     if (success) {
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      // Clear any existing timeout before setting a new one
+      if (copyResetTimeoutRef.current) {
+        clearTimeout(copyResetTimeoutRef.current)
+      }
+      copyResetTimeoutRef.current = setTimeout(() => setCopied(false), 2000)
     }
   }
 
