@@ -148,9 +148,10 @@ Main wallet component for inline display.
 Button component that opens wallet in a modal overlay.
 
 ```tsx
-interface WalletTriggerProps extends WalletPanelProps {
-  trigger?: React.ReactNode  // Custom trigger button
-  modalTitle?: string        // Modal header title
+interface WalletTriggerProps extends Omit<WalletPanelProps, 'className'> {
+  trigger?: React.ReactNode     // Custom trigger button
+  triggerClassName?: string     // Custom styling for trigger button
+  modalTitle?: string           // Modal header title
 }
 ```
 
@@ -158,7 +159,7 @@ interface WalletTriggerProps extends WalletPanelProps {
 Direct modal component for custom implementations.
 
 ```tsx
-interface WalletModalProps extends WalletPanelProps {
+interface WalletModalProps extends Omit<WalletPanelProps, 'className'> {
   isOpen: boolean
   onClose: () => void
   title?: string
@@ -256,13 +257,18 @@ function App() {
 }
 ```
 
-### With ZeroDev Smart Accounts
+### With ZeroDev Smart Accounts (SDK v5)
 
 ```tsx
 import { PrivyProvider, usePrivy } from '@privy-io/react-auth'
 import { WalletPanel } from '@wallet-panel/react'
-import { createKernelAccount, createKernelAccountClient, createEcdsaKernelSmartAccount } from '@zerodev/sdk'
-import { ENTRYPOINT_ADDRESS_V07 } from 'permissionless'
+import {
+  createKernelAccount,
+  createKernelAccountClient,
+  createZeroDevPaymasterClient,
+} from '@zerodev/sdk'
+import { signerToEcdsaValidator } from '@zerodev/ecdsa-validator'
+import { constants } from '@zerodev/sdk'
 import { createPublicClient, http } from 'viem'
 import { sepolia } from 'viem/chains'
 import { useState, useEffect } from 'react'
@@ -274,38 +280,55 @@ function WalletComponent() {
   useEffect(() => {
     if (privyClient.authenticated && privyClient.user?.wallet) {
       const initZeroDev = async () => {
+        const provider = await privyClient.getEthereumProvider()
+        
         const publicClient = createPublicClient({
           chain: sepolia,
           transport: http()
         })
 
-        const ecdsaAccount = await createEcdsaKernelSmartAccount(publicClient, {
-          entryPoint: ENTRYPOINT_ADDRESS_V07,
-          signer: privyClient.getEthereumProvider()
+        // Configure EntryPoint and Kernel version
+        const entryPoint = constants.getEntryPoint('0.7')
+        const kernelVersion = constants.KERNEL_V3_3
+
+        // Create ZeroDev validator & account
+        const ecdsaValidator = await signerToEcdsaValidator(publicClient, {
+          signer: provider,
+          entryPoint,
+          kernelVersion,
         })
 
         const account = await createKernelAccount(publicClient, {
-          plugins: {
-            sudo: ecdsaAccount
-          }
+          plugins: { sudo: ecdsaValidator },
+          entryPoint,
+          kernelVersion,
         })
 
+        // Configure ZeroDev Paymaster client
+        const paymaster = createZeroDevPaymasterClient({
+          chain: sepolia,
+          transport: http(process.env.VITE_ZERODEV_PAYMASTER_RPC),
+        })
+
+        // Create Kernel client
         const kernelClient = createKernelAccountClient({
           account,
           chain: sepolia,
           bundlerTransport: http(process.env.VITE_ZERODEV_BUNDLER_RPC),
-          middleware: {
-            sponsorUserOperation: async ({ userOperation }) => {
-              // Add paymaster sponsorship logic
-              return userOperation
-            }
-          }
+          paymaster,
         })
 
         setZerodevClient({
+          projectId: process.env.VITE_ZERODEV_PROJECT_ID,
           isConnected: true,
           address: account.address,
-          sendUserOperation: kernelClient.sendUserOperation,
+          sendUserOperation: async (tx) => {
+            const hash = await kernelClient.sendUserOperation({
+              ...tx,
+              account: kernelClient.account,
+            })
+            return { hash, userOpHash: hash }
+          },
           switchChain: async (chainId) => {
             // Implement chain switching logic
           }
@@ -360,14 +383,28 @@ const chains = [
 
 ```tsx
 // Inline panel (embedded in your UI)
-<WalletPanel privyClient={privy} zerodev={zerodev} />
+<WalletPanel 
+  config={{
+    privyAppId: "your-privy-app-id",
+    zerodevProjectId: "your-zerodev-project-id"
+  }} 
+/>
 
 // Modal overlay (avoids UI conflicts)
 <WalletTrigger 
-  privyClient={privy} 
-  zerodev={zerodev}
+  config={{
+    privyAppId: "your-privy-app-id",
+    zerodevProjectId: "your-zerodev-project-id"
+  }}
   trigger={<button>Open Wallet</button>}
   modalTitle="My App Wallet"
+/>
+
+// Custom trigger styling
+<WalletTrigger 
+  config={{ privyAppId: "your-app-id" }}
+  triggerClassName="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-full"
+  modalTitle="Custom Wallet"
 />
 ```
 

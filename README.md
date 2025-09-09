@@ -27,25 +27,32 @@ npm install @wallet-panel/react
 ### Peer Dependencies
 
 ```bash
-npm install react react-dom @privy-io/react-auth @zerodev/waas wagmi viem
+npm install react react-dom @privy-io/react-auth @zerodev/sdk wagmi viem
 ```
 
-### Basic Usage
+### Simple Configuration (Recommended)
 
 ```tsx
+import { PrivyProvider } from '@privy-io/react-auth'
 import { WalletPanel } from '@wallet-panel/react'
 
 function App() {
   return (
-    <WalletPanel
-      privyClient={privyClient}
-      onRequestLogin={() => openPrivyLogin()}
-    />
+    <PrivyProvider appId="your-privy-app-id">
+      <WalletPanel
+        config={{
+          privyAppId: "your-privy-app-id",
+          zerodevProjectId: "your-zerodev-project-id"
+        }}
+        enableSponsoredTx={true}
+        showWalletConnect={true}
+      />
+    </PrivyProvider>
   )
 }
 ```
 
-### With ZeroDev (Smart Accounts)
+### Advanced Configuration (For complex integrations)
 
 ```tsx
 import { WalletPanel } from '@wallet-panel/react'
@@ -104,7 +111,20 @@ The wallet panel uses a layered architecture:
 
 ## Integration Modes
 
-### Privy Only
+### Simple Configuration (Recommended)
+```tsx
+<PrivyProvider appId="your-privy-app-id">
+  <WalletPanel
+    config={{
+      privyAppId: "your-privy-app-id",
+      zerodevProjectId: "your-zerodev-project-id"
+    }}
+    enableSponsoredTx={true}
+  />
+</PrivyProvider>
+```
+
+### Privy Only (Advanced)
 ```tsx
 <WalletPanel
   privyClient={privyClient}
@@ -112,7 +132,7 @@ The wallet panel uses a layered architecture:
 />
 ```
 
-### ZeroDev Only
+### ZeroDev Only (Advanced)
 ```tsx
 <WalletPanel
   zerodev={zerodevContext}
@@ -120,13 +140,16 @@ The wallet panel uses a layered architecture:
 />
 ```
 
-### Unified (Recommended)
+### Modal Overlay
 ```tsx
-<WalletPanel
-  privyClient={privyClient}
-  zerodev={zerodevContext}
-  enableSponsoredTx={true}
-  onRequestLogin={() => openPrivyLogin()}
+import { WalletTrigger } from '@wallet-panel/react'
+
+<WalletTrigger
+  config={{
+    privyAppId: "your-privy-app-id",
+    zerodevProjectId: "your-zerodev-project-id"
+  }}
+  modalTitle="My Wallet"
 />
 ```
 
