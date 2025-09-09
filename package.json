@@ -19,5 +19,13 @@
   "dependencies": {
     "viem": "^2.37.2",
     "wagmi": "^2.16.9"
+  },
+  "overrides": {
+    "@privy-io/react-auth": "^2.24.0",
+    "permissionless": "^0.2.56",
+    "ox": "^0.9.3",
+    "vite": "^5.4.0",
+    "vite-plugin-dts": "^4.0.0",
+    "esbuild": "^0.21.0"
   }
 }

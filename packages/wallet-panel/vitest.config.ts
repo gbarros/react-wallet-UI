@@ -7,6 +7,9 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     globals: true,
+    coverage: {
+      provider: 'v8'
+    },
     include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     exclude: ['src/**/*.test-d.ts', 'src/**/*.playwright.*'],
     testTimeout: 5000,

@@ -123,3 +123,21 @@ Object.defineProperty(window, 'open', {
   writable: true,
   value: vi.fn(),
 })
+
+// jsdom doesn't implement Pointer Events APIs used by Radix UI
+// Provide minimal shims to prevent runtime errors in tests
+// @ts-expect-error - augmenting Element prototype for test env
+if (!Element.prototype.hasPointerCapture) {
+  // @ts-expect-error - jsdom env
+  Element.prototype.hasPointerCapture = () => false
+}
+// @ts-expect-error - augmenting Element prototype for test env
+if (!Element.prototype.setPointerCapture) {
+  // @ts-expect-error - jsdom env
+  Element.prototype.setPointerCapture = () => {}
+}
+// @ts-expect-error - augmenting Element prototype for test env
+if (!Element.prototype.releasePointerCapture) {
+  // @ts-expect-error - jsdom env
+  Element.prototype.releasePointerCapture = () => {}
+}

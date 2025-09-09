@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { Send, AlertCircle } from 'lucide-react'
 import type { Address } from '../types'
 import type { WalletState, LocaleStrings, Erc20, SendFormData } from '../types'
@@ -69,6 +69,13 @@ export function SendTab({
   }, [walletState])
 
   const selectedAsset = availableAssets.find(asset => asset.id === formData.asset)
+
+  // Ensure a valid default asset is selected based on availability
+  useEffect(() => {
+    if (!availableAssets.find(a => a.id === formData.asset) && availableAssets.length > 0) {
+      setFormData(prev => ({ ...prev, asset: availableAssets[0].id }))
+    }
+  }, [availableAssets, formData.asset])
 
   // Validation
   const validation = useMemo(() => {

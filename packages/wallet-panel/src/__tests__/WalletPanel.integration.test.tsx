@@ -1,6 +1,7 @@
 import React from 'react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { screen, fireEvent, act, waitFor, render } from '@testing-library/react'
+import { screen, act, waitFor, render } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../test-utils/render'
 import { WalletPanel } from '../components/WalletPanel'
 import { useWalletState } from '../hooks/useWalletState'
@@ -117,21 +118,21 @@ describe('WalletPanel Integration Tests', () => {
 
   describe('Chain Selector', () => {
     it('should display wallet header with account info', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       // Should show EOA Account type in the header
       expect(screen.getByText(/eoa account/i)).toBeInTheDocument()
     })
 
     it('should display wallet address in header', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       // Should show wallet address in header
       expect(screen.getByText('0x00EE...bbcc')).toBeInTheDocument()
     })
 
     it('should have disconnect functionality', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       // Should have disconnect button in header
       const disconnectButton = screen.getByRole('button', { name: /disconnect/i })
@@ -139,7 +140,7 @@ describe('WalletPanel Integration Tests', () => {
     })
 
     it('should display proper wallet panel structure', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       // Should have proper wallet panel class
       const walletPanel = document.querySelector('.wallet-panel')
@@ -152,25 +153,25 @@ describe('WalletPanel Integration Tests', () => {
 
   describe('Receive Tab', () => {
     it('should have receive tab available', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       const receiveTab = screen.getByRole('tab', { name: /receive/i })
       expect(receiveTab).toBeInTheDocument()
     })
 
     it('should be clickable', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       const receiveTab = screen.getByRole('tab', { name: /receive/i })
       expect(receiveTab).toBeInTheDocument()
       expect(receiveTab).not.toBeDisabled()
       
       // Just verify it can be clicked without errors
-      fireEvent.click(receiveTab)
+      await userEvent.click(receiveTab)
     })
 
     it('should have proper accessibility attributes', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       const receiveTab = screen.getByRole('tab', { name: /receive/i })
       expect(receiveTab).toBeInTheDocument()
@@ -182,7 +183,7 @@ describe('WalletPanel Integration Tests', () => {
     })
 
     it('should have proper tab structure', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       const receiveTab = screen.getByRole('tab', { name: /receive/i })
       expect(receiveTab).toBeInTheDocument()
@@ -193,7 +194,7 @@ describe('WalletPanel Integration Tests', () => {
     })
 
     it('should be part of wallet tabs navigation', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       // Verify all 5 tabs are present including receive
       const tabs = screen.getAllByRole('tab')
@@ -204,18 +205,18 @@ describe('WalletPanel Integration Tests', () => {
     })
 
     it('should support tab navigation with keyboard', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       const receiveTab = screen.getByRole('tab', { name: /receive/i })
       expect(receiveTab).toBeInTheDocument()
       
       // Tab should be focusable
-      receiveTab.focus()
+      await act(async () => { receiveTab.focus() })
       expect(receiveTab).toHaveFocus()
     })
 
     it('should have proper ARIA attributes', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       const receiveTab = screen.getByRole('tab', { name: /receive/i })
       expect(receiveTab).toBeInTheDocument()
@@ -226,7 +227,7 @@ describe('WalletPanel Integration Tests', () => {
     })
 
     it('should be part of the wallet navigation', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       // Start with balances tab active
       const balancesTab = screen.getByRole('tab', { name: /balances/i })
@@ -239,7 +240,7 @@ describe('WalletPanel Integration Tests', () => {
     })
 
     it('should have receive icon and label', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       const receiveTab = screen.getByRole('tab', { name: /receive/i })
       expect(receiveTab).toBeInTheDocument()
@@ -251,25 +252,25 @@ describe('WalletPanel Integration Tests', () => {
 
   describe('Send Tab', () => {
     it('should have send tab available', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       const sendTab = screen.getByRole('tab', { name: /send/i })
       expect(sendTab).toBeInTheDocument()
     })
 
     it('should be clickable', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       const sendTab = screen.getByRole('tab', { name: /send/i })
       expect(sendTab).toBeInTheDocument()
       expect(sendTab).not.toBeDisabled()
       
       // Just verify it can be clicked without errors
-      fireEvent.click(sendTab)
+      await userEvent.click(sendTab)
     })
 
     it('should have proper accessibility attributes', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       const sendTab = screen.getByRole('tab', { name: /send/i })
       expect(sendTab).toBeInTheDocument()
@@ -280,7 +281,7 @@ describe('WalletPanel Integration Tests', () => {
     })
 
     it('should be part of wallet tabs navigation', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       // Verify all 5 tabs are present including send
       const tabs = screen.getAllByRole('tab')
@@ -291,7 +292,7 @@ describe('WalletPanel Integration Tests', () => {
     })
 
     it('should have send icon and label', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       const sendTab = screen.getByRole('tab', { name: /send/i })
       expect(sendTab).toBeInTheDocument()
@@ -301,7 +302,7 @@ describe('WalletPanel Integration Tests', () => {
     })
 
     it('should be part of the wallet navigation', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       // Start with balances tab active
       const balancesTab = screen.getByRole('tab', { name: /balances/i })
@@ -314,7 +315,7 @@ describe('WalletPanel Integration Tests', () => {
     })
 
     it('should have proper tab structure', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       const sendTab = screen.getByRole('tab', { name: /send/i })
       expect(sendTab).toBeInTheDocument()
@@ -325,18 +326,18 @@ describe('WalletPanel Integration Tests', () => {
     })
 
     it('should support keyboard navigation', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       const sendTab = screen.getByRole('tab', { name: /send/i })
       expect(sendTab).toBeInTheDocument()
       
       // Tab should be focusable
-      sendTab.focus()
+      await act(async () => { sendTab.focus() })
       expect(sendTab).toHaveFocus()
     })
 
     it('should support tab navigation with keyboard', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       const sendTab = screen.getByRole('tab', { name: /send/i })
       expect(sendTab).toBeInTheDocument()
@@ -348,25 +349,25 @@ describe('WalletPanel Integration Tests', () => {
 
   describe('Sign Tab', () => {
     it('should have sign tab available', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       const signTab = screen.getByRole('tab', { name: /sign/i })
       expect(signTab).toBeInTheDocument()
     })
 
     it('should be clickable', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       const signTab = screen.getByRole('tab', { name: /sign/i })
       expect(signTab).toBeInTheDocument()
       expect(signTab).not.toBeDisabled()
       
       // Just verify it can be clicked without errors
-      fireEvent.click(signTab)
+      await userEvent.click(signTab)
     })
 
     it('should have proper accessibility attributes', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       const signTab = screen.getByRole('tab', { name: /sign/i })
       expect(signTab).toBeInTheDocument()
@@ -376,7 +377,7 @@ describe('WalletPanel Integration Tests', () => {
     })
 
     it('should be part of wallet tabs navigation', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       // Verify all 5 tabs are present including sign
       const tabs = screen.getAllByRole('tab')
@@ -387,7 +388,7 @@ describe('WalletPanel Integration Tests', () => {
     })
 
     it('should have sign icon and label', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       const signTab = screen.getByRole('tab', { name: /sign/i })
       expect(signTab).toBeInTheDocument()
@@ -399,14 +400,14 @@ describe('WalletPanel Integration Tests', () => {
 
   describe('More Tab', () => {
     it('should have more tab available', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       const moreTab = screen.getByRole('tab', { name: /more/i })
       expect(moreTab).toBeInTheDocument()
     })
 
     it('should have proper tab structure', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       const moreTab = screen.getByRole('tab', { name: /more/i })
       expect(moreTab).toBeInTheDocument()
@@ -417,20 +418,20 @@ describe('WalletPanel Integration Tests', () => {
     })
 
     it('should support keyboard navigation', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       const moreTab = screen.getByRole('tab', { name: /more/i })
       expect(moreTab).toBeInTheDocument()
       
       // Tab should be focusable
-      moreTab.focus()
+      await act(async () => { moreTab.focus() })
       expect(moreTab).toHaveFocus()
     })
   })
 
   describe('WalletConnect Integration', () => {
     it('should have WalletConnect functionality available', async () => {
-      renderWalletPanel()
+      await renderWalletPanel()
       
       // WalletConnect should be available through the more tab
       const moreTab = screen.getByRole('tab', { name: /more/i })
@@ -438,18 +439,18 @@ describe('WalletPanel Integration Tests', () => {
     })
 
     it('should be clickable', async () => {
-      renderWalletPanel()
+      await await renderWalletPanel()
       
       const moreTab = screen.getByRole('tab', { name: /more/i })
       expect(moreTab).toBeInTheDocument()
       expect(moreTab).not.toBeDisabled()
       
       // Just verify it can be clicked without errors
-      fireEvent.click(moreTab)
+      await userEvent.click(moreTab)
     })
 
     it('should have proper accessibility attributes', async () => {
-      renderWalletPanel()
+      await await renderWalletPanel()
       
       const moreTab = screen.getByRole('tab', { name: /more/i })
       expect(moreTab).toBeInTheDocument()
@@ -460,7 +461,7 @@ describe('WalletPanel Integration Tests', () => {
     })
 
     it('should be part of wallet tabs navigation', async () => {
-      renderWalletPanel()
+      await await renderWalletPanel()
       
       // Verify all 5 tabs are present including more
       const tabs = screen.getAllByRole('tab')
@@ -471,7 +472,7 @@ describe('WalletPanel Integration Tests', () => {
     })
 
     it('should have more icon and label', async () => {
-      renderWalletPanel()
+      await await renderWalletPanel()
       
       const moreTab = screen.getByRole('tab', { name: /more/i })
       expect(moreTab).toBeInTheDocument()
@@ -481,13 +482,13 @@ describe('WalletPanel Integration Tests', () => {
     })
 
     it('should maintain consistent behavior', async () => {
-      renderWalletPanel()
+      await await renderWalletPanel()
       
       const sendTab = screen.getByRole('tab', { name: /send/i })
       
       // Should be clickable multiple times
-      fireEvent.click(sendTab)
-      fireEvent.click(sendTab)
+      await userEvent.click(sendTab)
+      await userEvent.click(sendTab)
       
       // Should still be accessible
       expect(sendTab).toBeInTheDocument()
@@ -556,7 +557,7 @@ describe('WalletPanel Integration Tests', () => {
         refreshWalletData: vi.fn(),
       })
       
-      renderWalletPanel()
+      await await renderWalletPanel()
       
       // Should show loading indicators or handle gracefully
       expect(screen.getByText('0x00EE...bbcc')).toBeInTheDocument()
@@ -575,7 +576,7 @@ describe('WalletPanel Integration Tests', () => {
         refreshWalletData: vi.fn(),
       })
       
-      renderWalletPanel()
+     await  renderWalletPanel()
       
       // Should show disconnected state
       expect(screen.getByText(/not connected/i)).toBeInTheDocument()
@@ -594,7 +595,7 @@ describe('WalletPanel Integration Tests', () => {
     })
 
     it('should handle form validation gracefully', async () => {
-      renderWalletPanel()
+     await  renderWalletPanel()
       
       // Component should handle validation without crashing
       expect(screen.getByText('0x00EE...bbcc')).toBeInTheDocument()
@@ -605,7 +606,7 @@ describe('WalletPanel Integration Tests', () => {
     })
 
     it('should have error boundary protection', async () => {
-      renderWalletPanel()
+     await  renderWalletPanel()
       
       // Component should render without throwing errors
       expect(screen.getByText('0x00EE...bbcc')).toBeInTheDocument()
@@ -616,7 +617,7 @@ describe('WalletPanel Integration Tests', () => {
     })
 
     it('should handle network errors gracefully', async () => {
-      renderWalletPanel()
+     await  renderWalletPanel()
       
       // Should render even if network calls fail
       expect(screen.getByText('0x00EE...bbcc')).toBeInTheDocument()
@@ -627,7 +628,7 @@ describe('WalletPanel Integration Tests', () => {
     })
 
     it('should maintain component stability', async () => {
-      renderWalletPanel()
+     await  renderWalletPanel()
       
       // Component should be stable and not crash
       const walletPanel = document.querySelector('.wallet-panel')
@@ -640,7 +641,7 @@ describe('WalletPanel Integration Tests', () => {
 
   describe('Accessibility', () => {
     it('should have proper tab structure', async () => {
-      renderWalletPanel()
+     await  renderWalletPanel()
       
       // Check for proper roles and labels
       expect(screen.getByRole('tablist')).toBeTruthy()

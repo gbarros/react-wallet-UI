@@ -1,345 +1,233 @@
 /**
- * Functional tests for WalletPanel - tests actual user interactions and functionality
- * These tests complement the integration tests by focusing on real user flows
+ * Functional tests for WalletPanel: real validation and workflows
  */
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { WalletPanel } from '../components/WalletPanel'
-import { renderWalletPanel } from '../test-utils/render'
-import type { Address } from '../types'
+import { renderWithProviders } from '../test-utils/render'
+import { useWalletState } from '../hooks/useWalletState'
 
-// Mock QR code generation
+// Ensure QR generation is stubbed
 vi.mock('qrcode', () => ({
   toDataURL: vi.fn().mockResolvedValue('data:image/png;base64,mockqrcode'),
 }))
 
 const MOCK_ADDRESS = '0x00EEaabbccddEEaabbccddEEaabbccddEEaabbcc' as const
 
+// Minimal connected state helper
+function mockConnectedWalletState(overrides: Partial<ReturnType<typeof useWalletState>> = {}) {
+  vi.mocked(useWalletState).mockReturnValue({
+    isConnected: true,
+    address: MOCK_ADDRESS,
+    chainId: 1,
+    isSmartAccount: false,
+    nativeBalance: { balance: 1000000000000000000n, formatted: '1.0', symbol: 'ETH' },
+    tokenBalances: [],
+    isLoading: false,
+    refreshWalletData: vi.fn(),
+    ...overrides,
+  } as any)
+}
+
+// Mock adapter with required methods
+const mockAdapter = {
+  isReady: vi.fn(() => true),
+  isConnected: vi.fn(() => true),
+  isSmartAccountActive: vi.fn(() => false),
+  getAddress: vi.fn(async () => MOCK_ADDRESS),
+  getChainId: vi.fn(async () => 1),
+  getWalletInfo: vi.fn(async () => ({ isSmartAccount: false })),
+  signMessage: vi.fn(async () => '0x123'),
+  sendTransaction: vi.fn(async () => ({ hash: '0x456' })),
+  login: vi.fn(async () => {}),
+  logout: vi.fn(async () => {}),
+  switchChain: vi.fn(async () => {}),
+}
+
 describe('WalletPanel Functional Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Enable secure clipboard path
+    Object.defineProperty(window, 'isSecureContext', { value: true, configurable: true })
   })
 
-  describe('Send Tab Form Validation', () => {
-    it('should render Send tab with form elements', async () => {
+  describe('Send Tab - Validation and Submission', () => {
+    it('validates recipient and amount and enables submit when valid', async () => {
+      mockConnectedWalletState()
+      const onTxSubmitted = vi.fn()
       const user = userEvent.setup()
-      renderWalletPanel()
 
-      // Navigate to Send tab
+      renderWithProviders(
+        <WalletPanel adapter={mockAdapter as any} onTxSubmitted={onTxSubmitted} />
+      )
+
+      // Go to Send tab
       const sendTab = screen.getByRole('tab', { name: /send/i })
       await user.click(sendTab)
 
-      // Wait for Send tab content to load
+      // Initially shows recipient required error, submit disabled
       await waitFor(() => {
-        expect(screen.getByPlaceholderText('0x... or name.eth')).toBeInTheDocument()
-        expect(screen.getByPlaceholderText('0.0')).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: /send/i })).toBeInTheDocument()
+        expect(screen.getByText('Recipient address is required')).toBeInTheDocument()
       })
-    })
+      const recipientInput = screen.getByPlaceholderText('0x... or name.eth') as HTMLInputElement
+      const amountInput = screen.getByPlaceholderText('0.0') as HTMLInputElement
+      const submitBtn = screen.getByRole('button', { name: /send/i })
+      expect(submitBtn).toBeDisabled()
 
-    it('should handle form input interactions', async () => {
-      const user = userEvent.setup()
-      renderWalletPanel()
-
-      // Navigate to Send tab
-      const sendTab = screen.getByRole('tab', { name: /send/i })
-      await user.click(sendTab)
-
-      // Wait for Send tab content to load
+      // Invalid recipient
+      await user.type(recipientInput, 'invalid')
       await waitFor(() => {
-        expect(screen.getByPlaceholderText('0x... or name.eth')).toBeInTheDocument()
+        expect(screen.getByText('Invalid recipient address')).toBeInTheDocument()
       })
 
-      // Enter recipient address
-      const recipientInput = screen.getByPlaceholderText('0x... or name.eth')
-      await user.type(recipientInput, '0x742d35Cc6634C0532925a3b8D0C9E3e0C8b0e4c2')
+      // Valid recipient, now amount required
+      await user.clear(recipientInput)
+      await user.type(recipientInput, '0x' + '1'.repeat(40))
+      await waitFor(() => {
+        expect(screen.getByText('Amount is required')).toBeInTheDocument()
+      })
 
-      // Enter amount
-      const amountInput = screen.getByPlaceholderText('0.0')
+      // Invalid amount
+      await user.type(amountInput, '0')
+      await waitFor(() => {
+        expect(screen.getByText('Invalid amount')).toBeInTheDocument()
+      })
+
+      // Valid amount within balance; submit enabled and triggers send
+      await user.clear(amountInput)
       await user.type(amountInput, '0.1')
+      await waitFor(() => expect(submitBtn).toBeEnabled())
 
-      // Verify inputs were updated
-      expect(recipientInput).toHaveValue('0x742d35Cc6634C0532925a3b8D0C9E3e0C8b0e4c2')
-      expect(amountInput).toHaveValue(0.1)
-    })
-
-    it('should show send button in disabled state initially', async () => {
-      const user = userEvent.setup()
-      renderWalletPanel()
-
-      // Navigate to Send tab
-      const sendTab = screen.getByRole('tab', { name: /send/i })
-      await user.click(sendTab)
-
-      // Wait for Send tab content to load
+      await user.click(submitBtn)
       await waitFor(() => {
-        expect(screen.getByPlaceholderText('0x... or name.eth')).toBeInTheDocument()
-      })
-
-      // Send button should be disabled initially (no wallet connected)
-      const sendButton = screen.getByRole('button', { name: /send/i })
-      expect(sendButton).toBeDisabled()
-    })
-  })
-
-  describe('Receive Tab QR Code Generation', () => {
-    it('should render Receive tab with QR code placeholder', async () => {
-      const user = userEvent.setup()
-      renderWalletPanel()
-
-      // Navigate to Receive tab
-      const receiveTab = screen.getByRole('tab', { name: /receive/i })
-      await user.click(receiveTab)
-
-      // Wait for Receive tab content to load
-      await waitFor(() => {
-        // Should show receive tab content (may show "Connect wallet" message)
-        expect(screen.getByRole('tabpanel')).toBeInTheDocument()
+        expect(mockAdapter.sendTransaction).toHaveBeenCalled()
+        expect(onTxSubmitted).toHaveBeenCalledWith('0x456')
       })
     })
 
-    it('should handle QR code generation mock', async () => {
-      const user = userEvent.setup()
-      renderWalletPanel()
-
-      // Navigate to Receive tab
-      const receiveTab = screen.getByRole('tab', { name: /receive/i })
-      await user.click(receiveTab)
-
-      // QR code mock should be available
-      const QRCode = await import('qrcode')
-      expect(QRCode.toDataURL).toBeDefined()
-    })
-  })
-
-  describe('Clipboard Copy Functionality', () => {
-    it('should have clipboard copy functionality available', async () => {
-      renderWalletPanel()
-
-      // Clipboard mock should be available
-      expect(navigator.clipboard.writeText).toBeDefined()
-      expect(typeof navigator.clipboard.writeText).toBe('function')
-    })
-
-    it('should handle clipboard copy operations', async () => {
-      renderWalletPanel()
-
-      // Test clipboard functionality
-      await navigator.clipboard.writeText('test-text')
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('test-text')
-    })
-  })
-
-  describe('Wallet Connection State', () => {
-    it('should display not connected state initially', async () => {
-      renderWalletPanel()
-
-      // Mock wallet shows "Not connected" state initially
-      await waitFor(() => {
-        expect(screen.getByText('Not connected')).toBeInTheDocument()
-      })
-    })
-
-    it('should display EOA account type', async () => {
-      renderWalletPanel()
-
-      // Should show account type
-      await waitFor(() => {
-        expect(screen.getByText('EOA Account')).toBeInTheDocument()
-      })
-    })
-  })
-
-  describe('Tab Navigation', () => {
-    it('should navigate between tabs successfully', async () => {
-      const user = userEvent.setup()
-      renderWalletPanel()
-
-      // Should start on Balances tab
-      expect(screen.getByRole('tab', { name: /balances/i })).toHaveAttribute('aria-selected', 'true')
-
-      // Navigate to Send tab
-      const sendTab = screen.getByRole('tab', { name: /send/i })
-      await user.click(sendTab)
-      
-      await waitFor(() => {
-        expect(sendTab).toHaveAttribute('aria-selected', 'true')
-      })
-
-      // Navigate to Receive tab
-      const receiveTab = screen.getByRole('tab', { name: /receive/i })
-      await user.click(receiveTab)
-      
-      await waitFor(() => {
-        expect(receiveTab).toHaveAttribute('aria-selected', 'true')
-      })
-
-      // Navigate to Sign tab
-      const signTab = screen.getByRole('tab', { name: /sign/i })
-      await user.click(signTab)
-      
-      await waitFor(() => {
-        expect(signTab).toHaveAttribute('aria-selected', 'true')
-      })
-
-      // Navigate to More tab
-      const moreTab = screen.getByRole('tab', { name: /more/i })
-      await user.click(moreTab)
-      
-      await waitFor(() => {
-        expect(moreTab).toHaveAttribute('aria-selected', 'true')
-      })
-    })
-  })
-
-  describe('Component Rendering', () => {
-    it('should render all main UI elements', async () => {
-      renderWalletPanel()
-
-      // Should render main wallet panel
-      expect(screen.getByRole('tablist')).toBeInTheDocument()
-      
-      // Should render all tabs
-      expect(screen.getByRole('tab', { name: /balances/i })).toBeInTheDocument()
-      expect(screen.getByRole('tab', { name: /send/i })).toBeInTheDocument()
-      expect(screen.getByRole('tab', { name: /receive/i })).toBeInTheDocument()
-      expect(screen.getByRole('tab', { name: /sign/i })).toBeInTheDocument()
-      expect(screen.getByRole('tab', { name: /more/i })).toBeInTheDocument()
-    })
-  })
-
-  describe('Sign Tab Message Signing', () => {
-    it('should render Sign tab with message input', async () => {
-      const user = userEvent.setup()
-      renderWalletPanel()
-
-      // Navigate to Sign tab
-      const signTab = screen.getByRole('tab', { name: /sign/i })
-      await user.click(signTab)
-
-      // Wait for Sign tab content to load
-      await waitFor(() => {
-        expect(screen.getByRole('tabpanel')).toBeInTheDocument()
-      })
-    })
-
-    it('should handle message input interactions', async () => {
-      const user = userEvent.setup()
-      renderWalletPanel()
-
-      // Navigate to Sign tab
-      const signTab = screen.getByRole('tab', { name: /sign/i })
-      await user.click(signTab)
-
-      // Wait for Sign tab content to load
-      await waitFor(() => {
-        expect(screen.getByRole('tabpanel')).toBeInTheDocument()
-      })
-
-      // Look for message input (may be textarea or input)
-      const messageInputs = screen.queryAllByRole('textbox')
-      if (messageInputs.length > 0) {
-        const messageInput = messageInputs[0]
-        await user.type(messageInput, 'Test message to sign')
-        expect(messageInput).toHaveValue('Test message to sign')
+    it('sends ERC-20 transfer with correct calldata', async () => {
+      // Prepare wallet state with an ERC-20 balance
+      const token = {
+        address: '0x' + '2'.repeat(40) as const,
+        symbol: 'USDC',
+        decimals: 6,
       }
-    })
+      mockConnectedWalletState({
+        tokenBalances: [
+          {
+            token,
+            balance: 1_000_000n, // 1.0 USDC
+            formatted: '1.0',
+          },
+        ],
+        nativeBalance: undefined,
+      } as any)
 
-    it('should show sign button', async () => {
+      const onTxSubmitted = vi.fn()
       const user = userEvent.setup()
-      renderWalletPanel()
 
-      // Navigate to Sign tab
+      renderWithProviders(
+        <WalletPanel adapter={mockAdapter as any} onTxSubmitted={onTxSubmitted} tokens={[token as any]} />
+      )
+
+      // Go to Send tab
+      const sendTab = screen.getByRole('tab', { name: /send/i })
+      await user.click(sendTab)
+
+      // Asset defaults to USDC when no native balance is available
+
+      // Enter recipient and amount (0.5 USDC -> 500000 base units)
+      const recipientInput = screen.getByPlaceholderText('0x... or name.eth') as HTMLInputElement
+      const amountInput = screen.getByPlaceholderText('0.0') as HTMLInputElement
+      await user.type(recipientInput, '0x' + '1'.repeat(40))
+      await user.type(amountInput, '0.5')
+
+      // Submit
+      const submitBtn = screen.getByRole('button', { name: /^send$/i })
+      await user.click(submitBtn)
+
+      await waitFor(() => {
+        expect(mockAdapter.sendTransaction).toHaveBeenCalled()
+      })
+
+      // Validate calldata encoding: 0xa9059cbb + 32-byte addr + 32-byte amount
+      const call = vi.mocked(mockAdapter.sendTransaction).mock.calls.at(-1)![0] as any
+      expect(call.to).toBe(token.address)
+      expect(call.data).toMatch(/^0xa9059cbb[0-9a-fA-F]{128}$/)
+
+      // Verify encoded recipient and amount appear in calldata
+      const encoded = call.data as string
+      const encodedTo = encoded.slice(10, 74)
+      const encodedAmount = encoded.slice(74)
+      expect(encodedTo.endsWith('1'.repeat(40))).toBe(true)
+      // 0.5 USDC with 6 decimals equals 500000 -> 0x7a120
+      expect(BigInt('0x' + encodedAmount)).toBe(500000n)
+
+      expect(onTxSubmitted).toHaveBeenCalledWith('0x456')
+    })
+  })
+
+  describe('Sign Tab - Message Signing', () => {
+    it('signs a message and shows signature, copy works', async () => {
+      mockConnectedWalletState()
+      const onSign = vi.fn()
+      const user = userEvent.setup()
+
+      renderWithProviders(
+        <WalletPanel adapter={mockAdapter as any} onSign={onSign} />
+      )
+
       const signTab = screen.getByRole('tab', { name: /sign/i })
       await user.click(signTab)
 
-      // Wait for Sign tab content to load
+      const textarea = screen.getByPlaceholderText('Enter message to sign...')
+      await user.type(textarea, 'hello')
+
+      const signButton = screen.getByRole('button', { name: /^sign$/i })
+      await user.click(signButton)
+
       await waitFor(() => {
-        expect(screen.getByRole('tabpanel')).toBeInTheDocument()
+        expect(mockAdapter.signMessage).toHaveBeenCalledWith('hello')
+        expect(onSign).toHaveBeenCalledWith('0x123', 'hello')
+        expect(screen.getByDisplayValue('0x123')).toBeInTheDocument()
       })
 
-      // Look for sign button
-      const signButtons = screen.queryAllByRole('button', { name: /sign/i })
-      expect(signButtons.length).toBeGreaterThan(0)
-    })
-  })
-
-  describe('Balance Refresh Functionality', () => {
-    it('should handle balance refresh operations', async () => {
-      renderWalletPanel()
-
-      // Should be on Balances tab by default
-      expect(screen.getByRole('tab', { name: /balances/i })).toHaveAttribute('aria-selected', 'true')
-
-      // Component should render without crashing during balance operations
-      expect(screen.getByRole('tabpanel')).toBeInTheDocument()
-    })
-
-    it('should display balance information', async () => {
-      renderWalletPanel()
-
-      // Should show balance-related UI elements
+      // Copy signature
+      const sigInput = screen.getByDisplayValue('0x123')
+      const copyBtn = within(sigInput.parentElement as HTMLElement).getByRole('button')
+      await user.click(copyBtn)
       await waitFor(() => {
-        expect(screen.getByText('Not connected')).toBeInTheDocument()
+        expect(screen.getByText('Copied!')).toBeInTheDocument()
       })
     })
   })
 
-  describe('Chain Selector Functionality', () => {
-    it('should handle chain selection UI', async () => {
-      renderWalletPanel()
-
-      // Look for chain-related UI elements (may be in header or settings)
-      const walletPanel = screen.getByRole('tablist').closest('.wallet-panel')
-      expect(walletPanel).toBeInTheDocument()
-    })
-
-    it('should display current chain information', async () => {
-      renderWalletPanel()
-
-      // Should show wallet connection state which includes chain info
-      await waitFor(() => {
-        expect(screen.getByText('Not connected')).toBeInTheDocument()
-      })
-    })
-  })
-
-  describe('WalletConnect Modal Functionality', () => {
-    it('should handle WalletConnect modal interactions', async () => {
+  describe('Receive Tab - QR and Copy', () => {
+    it('generates QR code and copies address', async () => {
+      mockConnectedWalletState()
       const user = userEvent.setup()
-      renderWalletPanel()
 
-      // Navigate to More tab where WalletConnect might be
-      const moreTab = screen.getByRole('tab', { name: /more/i })
-      await user.click(moreTab)
+      renderWithProviders(
+        <WalletPanel adapter={mockAdapter as any} />
+      )
 
-      // Wait for More tab to be selected
+      const receiveTab = screen.getByRole('tab', { name: /receive/i })
+      await user.click(receiveTab)
+
+      // QR image should appear
       await waitFor(() => {
-        expect(moreTab).toHaveAttribute('aria-selected', 'true')
+        expect(screen.getByAltText('Address QR Code')).toBeInTheDocument()
       })
 
-      // More tab should be active
-      expect(moreTab).toHaveAttribute('data-state', 'active')
-    })
-
-    it('should provide WalletConnect functionality', async () => {
-      const user = userEvent.setup()
-      renderWalletPanel()
-
-      // Navigate to More tab
-      const moreTab = screen.getByRole('tab', { name: /more/i })
-      await user.click(moreTab)
-
-      // Wait for More tab to be selected
+      // Copy address
+      const addrInput = screen.getByDisplayValue(MOCK_ADDRESS)
+      const copyButton = within(addrInput.parentElement as HTMLElement).getByRole('button')
+      await user.click(copyButton)
       await waitFor(() => {
-        expect(moreTab).toHaveAttribute('aria-selected', 'true')
+        expect(screen.getByText('Copied!')).toBeInTheDocument()
       })
-
-      // Should have buttons available in the UI
-      const buttons = screen.queryAllByRole('button')
-      expect(buttons.length).toBeGreaterThan(0)
     })
   })
 })
